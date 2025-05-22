@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE specific files
+.vscode/
+.idea/
+
+# Instance folder (Flask)
+instance/
+
+# Uploads folder
+uploads/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Other
+.DS_Store

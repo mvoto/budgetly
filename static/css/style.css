@@ -1,0 +1,647 @@
+:root {
+    --primary-color: #3949AB; /* Indigo */
+    --primary-dark-color: #283593; /* Darker Indigo */
+    --accent-color: #FF7043; /* Deep Orange Accent */
+    --accent-hover-color: #F4511E; /* Darker Orange for hover */
+    --light-gray-color: #F5F5F5;
+    --medium-gray-color: #E0E0E0;
+    --dark-gray-color: #424242;
+    --text-color: #212121;
+    --text-light-color: #757575;
+    --white-color: #FFFFFF;
+    --success-color: #4CAF50;
+    --error-color: #F44336;
+    --info-color: #2196F3;
+    --warning-color: #FFC107;
+
+    --font-family: 'Poppins', sans-serif;
+    --border-radius: 8px;
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --transition-speed: 0.3s ease;
+}
+
+body {
+    font-family: var(--font-family);
+    margin: 0;
+    padding: 0;
+    background-color: var(--light-gray-color);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+header {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    padding: 1rem 2rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+header nav {
+    margin-top: 0; /* Reset from previous */
+}
+
+header nav a {
+    color: var(--white-color);
+    margin: 0 10px;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    transition: background-color var(--transition-speed);
+}
+
+header nav a:hover, header nav a.active {
+    background-color: var(--primary-dark-color);
+}
+
+main {
+    flex-grow: 1;
+    padding: 2rem;
+    max-width: 1200px; /* Wider for modern look */
+    width: 90%;
+    margin: 2rem auto;
+    background-color: transparent; /* Sections will have their own background */
+}
+
+footer {
+    background-color: var(--dark-gray-color);
+    color: var(--light-gray-color);
+    text-align: center;
+    padding: 1.5rem 0;
+    margin-top: auto; /* Pushes footer to bottom */
+    font-size: 0.9rem;
+}
+
+/* Add more styles as we build out components */
+
+.upload-section, .transactions-section, .form-section, .chart-section, .dashboard-summary {
+    background-color: var(--white-color);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.upload-section h2, .transactions-section h2, .form-section h2, .chart-section h2, .dashboard-summary h2 {
+    margin-top: 0;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* Form Styles */
+form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-light-color);
+}
+
+form input[type="text"],
+form input[type="number"],
+form input[type="date"],
+form input[type="file"],
+form select,
+form textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--medium-gray-color);
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+form input[type="file"] {
+    padding: 0.5rem; /* Specific padding for file input */
+}
+
+form input[type="text"]:focus,
+form input[type="number"]:focus,
+form input[type="date"]:focus,
+form input[type="file"]:focus,
+form select:focus,
+form textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.2); /* Light Indigo shadow */
+    outline: none;
+}
+
+/* Button Styles */
+.btn,
+form button[type="submit"] { /* Apply .btn styles to submit buttons too */
+    background-color: var(--accent-color);
+    color: var(--white-color);
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    font-family: var(--font-family);
+    box-sizing: border-box; /* Ensure consistent box sizing */
+}
+
+.btn:hover,
+form button[type="submit"]:hover {
+    background-color: var(--accent-hover-color);
+    transform: translateY(-2px);
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.btn-edit {
+    background-color: var(--info-color);
+    color: var(--white-color);
+}
+
+.btn-edit:hover {
+    background-color: #1976D2; /* Darker Info Blue */
+}
+
+.btn-delete {
+    background-color: transparent; /* Remove background */
+    color: var(--error-color); /* SVG will inherit this color */
+    border: none; /* Remove border */
+    padding: 0.25em; /* Minimal padding around the icon */
+    box-shadow: none; /* Remove any inherited box shadow */
+}
+
+.btn-delete:hover {
+    background-color: transparent; /* Ensure no background on hover */
+    color: #D32F2F; /* Darker Error Red for icon color on hover */
+    transform: none; /* Remove transform from general .btn hover */
+}
+
+/* Ensure SVG icon inherits color and is sized appropriately within buttons */
+.btn svg {
+    display: inline-block;
+    vertical-align: middle;
+    width: 1.2em; /* Adjust size as needed */
+    height: 1.2em; /* Adjust size as needed */
+    fill: currentColor; /* Inherit color from button text (white in this case) */
+}
+
+.btn-delete svg {
+    /* Specific adjustments for delete icon if needed, otherwise inherits from .btn svg */
+}
+
+/* Table Styles */
+table {
+    width: 100%;
+    border-collapse: separate; /* Allows for border-radius on cells if needed */
+    border-spacing: 0;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: var(--border-radius);
+    overflow: hidden; /* Ensures border-radius clips content */
+}
+
+th, td {
+    border-bottom: 1px solid var(--medium-gray-color);
+    padding: 1rem;
+    text-align: left;
+    vertical-align: middle;
+}
+
+th {
+    background-color: var(--light-gray-color);
+    color: var(--primary-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+th.sortable {
+    cursor: pointer;
+}
+
+th.sortable:hover {
+    background-color: var(--medium-gray-color);
+}
+
+.sort-indicator {
+    font-size: 0.8em; /* Make indicator slightly smaller */
+    margin-left: 5px;
+    display: inline-block; /* Ensures it doesn't break line */
+}
+
+/* Zebra striping for rows */
+tbody tr:nth-child(even) {
+    background-color: var(--white-color);
+}
+tbody tr:nth-child(odd) {
+    background-color: #FAFAFA; /* Slightly off-white */
+}
+
+tbody tr:hover {
+    background-color: #EEEEEE; /* Light hover for rows */
+}
+
+.transactions-section td.positive {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.transactions-section td.negative {
+    color: var(--error-color);
+    font-weight: 500;
+}
+
+td a.btn { /* Ensure buttons in table cells are vertically aligned */
+    /* margin-right: 5px; */ /* Will be handled by gap in flex container */
+}
+td form {
+    /* margin-right: 5px; */ /* Will be handled by gap in flex container */
+    margin-bottom: 0; /* Remove any bottom margin if form has it by default */
+}
+
+.action-buttons-container {
+    display: flex;
+    align-items: center; /* Vertically align items if they have different heights */
+    gap: 5px; /* Space between buttons */
+    flex-wrap: nowrap; /* Prevent wrapping on larger screens by default */
+}
+
+.action-buttons-container > * { /* Target direct children (<a> and <form> or <button> if form is display:contents) */
+    flex-shrink: 0; /* Prevent items from shrinking if space is tight */
+}
+
+.action-buttons-container form {
+    display: contents; /* Form itself doesn't participate in layout, its children do */
+    /* margin, padding, border, line-height on the form are now irrelevant */
+}
+
+.action-buttons-container form button {
+    /* This button is now effectively a direct child of .action-buttons-container */
+    /* It already has .btn .btn-small .btn-delete applied */
+    margin: 0; /* Ensure no default button margins interfere */
+    /* line-height: normal; is already in .btn, inherited or default */
+}
+
+/* Flash Messages */
+.flash-messages {
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+}
+
+.alert {
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--border-radius);
+    text-align: left; /* Changed from center */
+    display: flex; /* For aligning text and close button */
+    justify-content: space-between; /* For aligning text and close button */
+    align-items: center; /* For aligning text and close button */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.alert-success {
+    color: var(--white-color);
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.alert-error {
+    color: var(--white-color);
+    background-color: var(--error-color);
+    border-color: var(--error-color);
+}
+
+.alert-info {
+    color: var(--white-color);
+    background-color: var(--info-color);
+    border-color: var(--info-color);
+}
+
+.alert-warning { /* Added warning style */
+    color: var(--text-color);
+    background-color: var(--warning-color);
+    border-color: var(--warning-color);
+}
+
+
+.close-btn {
+    font-size: 1.5rem;
+    font-weight: bold;
+    line-height: 1;
+    color: inherit; /* Inherit color from parent .alert for better contrast */
+    text-shadow: none; /* Remove text shadow for flatter look */
+    opacity: 0.7;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0 0 0 15px; /* Add padding to left for spacing */
+}
+
+.close-btn:hover {
+    opacity: 1;
+}
+
+/* Dashboard Summary & Month Navigation */
+.dashboard-summary {
+    text-align: center; /* Center the content of this section */
+    /* Removed background-color and padding, sections will handle it if needed */
+}
+
+.month-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.month-navigation h2 {
+    margin: 0 1rem; /* Give some space around the title */
+    font-size: 1.6rem; /* Slightly larger title for the month */
+    color: var(--primary-dark-color);
+    border-bottom: none; /* Remove inherited border */
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.month-navigation a.btn {
+    background-color: var(--primary-color);
+}
+.month-navigation a.btn:hover {
+    background-color: var(--primary-dark-color);
+}
+
+.total-spending {
+    margin-top: 1rem;
+}
+
+.total-spending h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.total-spending h3 .currency.negative {
+    color: var(--error-color);
+}
+.total-spending h3 .currency.positive {
+    color: var(--success-color);
+}
+
+.total-spending h3.balance {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--medium-gray-color);
+}
+
+/* Chart and Top Categories Styling */
+.chart-and-summary-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 2rem; /* Space between chart and list */
+    align-items: flex-start; /* Align items to the top */
+}
+
+.chart-container {
+    flex: 2; /* Chart takes more space */
+    min-width: 300px; /* Minimum width for the chart */
+}
+
+.top-categories-container {
+    flex: 1; /* List takes less space */
+    min-width: 250px; /* Minimum width for the list */
+}
+
+.top-categories-container h3 {
+    font-size: 1.2rem;
+    color: var(--primary-dark-color);
+    margin-top: 0; /* Align with chart section's main H2 if possible */
+    margin-bottom: 1rem;
+}
+
+.top-categories-list {
+    /* list-style: none; */ /* Remove this to get default numbering */
+    padding-left: 20px; /* Standard indentation for ordered list numbers */
+    margin: 0;
+}
+
+.top-categories-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--light-gray-color);
+    font-size: 0.95rem;
+}
+
+.top-categories-list li:last-child {
+    border-bottom: none;
+}
+
+.top-categories-list .category-name {
+    color: var(--text-color);
+}
+
+.top-categories-list .category-amount {
+    font-weight: 500;
+}
+
+.no-data-message {
+    text-align: center;
+    color: var(--text-light-color);
+    padding: 2rem 0;
+    font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        padding: 1rem;
+    }
+    header h1 {
+        margin-bottom: 0.5rem;
+        font-size: 1.8rem;
+    }
+    header nav a {
+        margin: 5px;
+        display: block; /* Stack nav links */
+        text-align: center;
+    }
+    main {
+        padding: 1rem;
+        width: 95%;
+    }
+    .upload-section, .transactions-section, .form-section, .chart-section, .dashboard-summary {
+        padding: 1.5rem;
+    }
+    .upload-section h2, .transactions-section h2, .form-section h2, .chart-section h2, .dashboard-summary h2 {
+        font-size: 1.3rem;
+    }
+
+    .month-navigation {
+        flex-direction: column;
+    }
+    .month-navigation h2 {
+        margin-bottom: 0.5rem; /* Space below title when stacked */
+        font-size: 1.4rem;
+    }
+    .month-navigation a.btn {
+        margin-top: 0.5rem;
+        width: auto; /* Don't make nav buttons full width here */
+    }
+    .total-spending h3 {
+        font-size: 1.5rem;
+    }
+
+    .chart-and-summary-container {
+        flex-direction: column; /* Stack chart and list on smaller screens */
+    }
+    .chart-container,
+    .top-categories-container {
+        flex-basis: 100%; /* Each takes full width when stacked */
+        min-width: unset; /* Reset min-width */
+    }
+    .top-categories-container h3 {
+        margin-top: 1.5rem; /* Add some space when stacked below chart */
+    }
+
+    /* Make table more responsive - basic horizontal scroll */
+    .transactions-section {
+        overflow-x: auto;
+    }
+    table {
+        min-width: 600px; /* Force table to be at least this wide */
+    }
+    th, td {
+        padding: 0.75rem;
+    }
+    .btn, form button[type="submit"] {
+        width: 100%; /* Full width buttons on small screens */
+        margin-bottom: 10px;
+    }
+    .btn-small {
+        width: auto; /* Let small buttons be auto width */
+    }
+    .action-buttons-container .btn,
+    .action-buttons-container form, /* This rule might become less relevant if form is display:contents */
+    .action-buttons-container form button { /* This now targets the button directly for width */
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    /* .action-buttons-container form { */ /* This specific rule for form width might be redundant */
+        /* width: 100%; */
+        /* margin-bottom: 0; */
+    /* } */
+    td form button {
+        width: 100%; /* Ensure delete button in form takes width */
+    }
+    .summary-flex-container {
+        flex-direction: column;
+        align-items: stretch; /* Make children take full width when stacked */
+    }
+    .numerical-summary,
+    .income-spending-chart-container {
+        flex-basis: auto; /* Reset flex-basis */
+        min-width: unset; /* Reset min-width */
+        margin-bottom: 1.5rem; /* Space between stacked items */
+    }
+    .income-spending-chart-container {
+        height: 220px; /* Adjust height for stacked view if needed */
+        margin-bottom: 0; /* No margin for the last item */
+    }
+    .numerical-summary h3 {
+        font-size: 1.2rem;
+    }
+    .numerical-summary h3.balance {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+    .upload-section h2, .transactions-section h2, .form-section h2, .chart-section h2, .dashboard-summary h2 {
+        font-size: 1.2rem;
+    }
+    th, td {
+        font-size: 0.9rem;
+    }
+}
+
+.summary-flex-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 2rem;
+    align-items: flex-start; /* Align items to the top if they have different heights */
+    margin-top: 1.5rem; /* Space below month navigation */
+}
+
+.numerical-summary {
+    flex: 1; /* Takes available space, good for text */
+    min-width: 280px; /* Minimum width before wrapping */
+    text-align: left; /* Align text to the left within this block */
+}
+
+.income-spending-chart-container {
+    flex: 1.5; /* Chart can take a bit more space */
+    min-width: 300px; /* Minimum width for the chart container */
+    height: 200px; /* Approximate height for the bar chart, adjust as needed */
+}
+
+#incomeSpendingBarChart {
+    max-height: 100%; /* Ensure chart does not overflow its container */
+}
+
+.numerical-summary h3 {
+    font-size: 1.3rem; /* Adjusted size for better fit */
+    font-weight: 500;
+    color: var(--text-color);
+    margin-top: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.numerical-summary h3:first-child {
+    margin-top: 0;
+}
+
+.numerical-summary h3 .currency.negative {
+    color: var(--error-color);
+    font-weight: 600;
+}
+.numerical-summary h3 .currency.positive {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.numerical-summary h3.balance {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--medium-gray-color);
+    font-size: 1.4rem; /* Make balance slightly more prominent */
+    font-weight: 600;
+}

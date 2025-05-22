@@ -1,0 +1,4 @@
+Flask>=2.0
+Flask-SQLAlchemy>=2.5
+python-dotenv>=0.19 # For managing environment variables
+ofxparse>=0.21 # For later OFX/QFX parsing

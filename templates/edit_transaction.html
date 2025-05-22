@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Transaction - Budgetly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Budgetly</h1>
+        <nav>
+            <a href="{{ url_for('index') }}">Dashboard</a>
+            <a href="{{ url_for('add_transaction_manual') }}">Add Manual Transaction</a>
+        </nav>
+    </header>
+    <main>
+        <section class="form-section">
+            <h2>Edit Transaction</h2>
+            <form method="POST" action="{{ url_for('edit_transaction', transaction_id=transaction.id) }}">
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date" value="{{ transaction.date.strftime('%Y-%m-%d') if transaction else form_data.get('date', '') }}" required>
+
+                <label for="description">Description:</label>
+                <input type="text" id="description" name="description" value="{{ transaction.description if transaction else form_data.get('description', '') }}" required>
+
+                <label for="amount">Amount:</label>
+                <input type="number" id="amount" name="amount" step="0.01" value="{{ transaction.amount if transaction else form_data.get('amount', '') }}" required placeholder="Use negative for expenses">
+
+                <label for="account_source">Account Source:</label>
+                <input type="text" id="account_source" name="account_source" value="{{ transaction.account_source if transaction else form_data.get('account_source', '') }}" required>
+
+                <label for="category">Category:</label>
+                <select id="category" name="category">
+                    <option value="__None__">-- Select or Leave Blank for Auto --</option> {# Represents None/Auto-assign #}
+                    {% for cat in categories %}
+                        <option value="{{ cat }}"
+                                {% if form_data.get('category') == cat %}selected
+                                {% elif transaction and transaction.category == cat and not form_data.get('category') %}selected
+                                {% endif %}>
+                            {{ cat }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit">Update Transaction</button>
+                <a href="{{ url_for('index') }}" class="btn" style="margin-left: 10px; background-color: #777;">Cancel</a>
+            </form>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 Budgetly</p>
+    </footer>
+</body>
+</html>
