@@ -13,8 +13,8 @@
     <header>
         <h1>Budgetly</h1>
         <nav>
-            <a href="{{ url_for('index') }}">Dashboard</a>
-            <a href="{{ url_for('add_transaction_manual') }}">Add Manual Transaction</a>
+            <a href="{{ url_for('home') }}">Dashboard</a>
+            <a href="{{ url_for('add_transaction') }}">Add Manual Transaction</a>
         </nav>
     </header>
     <main>
@@ -22,32 +22,30 @@
             <h2>Edit Transaction</h2>
             <form method="POST" action="{{ url_for('edit_transaction', transaction_id=transaction.id) }}">
                 <label for="date">Date:</label>
-                <input type="date" id="date" name="date" value="{{ transaction.date.strftime('%Y-%m-%d') if transaction else form_data.get('date', '') }}" required>
+                <input type="date" id="date" name="date" value="{{ transaction.date.strftime('%Y-%m-%d') if transaction else '' }}" required>
 
                 <label for="description">Description:</label>
-                <input type="text" id="description" name="description" value="{{ transaction.description if transaction else form_data.get('description', '') }}" required>
+                <input type="text" id="description" name="description" value="{{ transaction.description if transaction else '' }}" required>
 
                 <label for="amount">Amount:</label>
-                <input type="number" id="amount" name="amount" step="0.01" value="{{ transaction.amount if transaction else form_data.get('amount', '') }}" required placeholder="Use negative for expenses">
+                <input type="number" id="amount" name="amount" step="0.01" value="{{ transaction.amount if transaction else '' }}" required placeholder="Use negative for expenses">
 
                 <label for="account_source">Account Source:</label>
-                <input type="text" id="account_source" name="account_source" value="{{ transaction.account_source if transaction else form_data.get('account_source', '') }}" required>
+                <input type="text" id="account_source" name="account_source" value="{{ transaction.account_source if transaction else '' }}" required>
 
-                <label for="category">Category:</label>
-                <select id="category" name="category">
-                    <option value="__None__">-- Select or Leave Blank for Auto --</option> {# Represents None/Auto-assign #}
-                    {% for cat in categories %}
-                        <option value="{{ cat }}"
-                                {% if form_data.get('category') == cat %}selected
-                                {% elif transaction and transaction.category == cat and not form_data.get('category') %}selected
-                                {% endif %}>
-                            {{ cat }}
+                <label for="category_id">Category:</label>
+                <select id="category_id" name="category_id">
+                    <option value="">-- Select Category (Optional) --</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}"
+                                {% if transaction and transaction.category_id == category.id %}selected{% endif %}>
+                            {{ category.name }}
                         </option>
                     {% endfor %}
                 </select>
 
                 <button type="submit">Update Transaction</button>
-                <a href="{{ url_for('index') }}" class="btn" style="margin-left: 10px; background-color: #777;">Cancel</a>
+                <a href="{{ url_for('home') }}" class="btn" style="margin-left: 10px; background-color: #777;">Cancel</a>
             </form>
         </section>
     </main>

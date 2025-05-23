@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import os
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename # For securely saving filenames
@@ -7,237 +7,291 @@ from collections import defaultdict # For calculating category sums
 import json # For passing data to JavaScript
 import calendar # For month names
 from sqlalchemy import extract # For filtering by month/year
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate # For database migrations
+import logging # For better logging
 
 from extensions import db
-from models import Transaction
-from parser import process_uploaded_file # Import the parser function
-from categorizer import assign_category, get_defined_categories # Add get_defined_categories
+from models import Category, Rule, Transaction
+from categorizer import assign_category, get_defined_categories
+from parser import process_uploaded_file # Re-adding parser for file uploads
 
 load_dotenv() # Load environment variables from .env
 
+# Setup basic logging
+logging.basicConfig(level=logging.INFO)
 
 def create_app():
-    app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key') # Add a secret key
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///budget.db')
+    app = Flask(__name__, template_folder='templates')
+
+    # --- Configuration ---
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a_very_strong_default_secret_key_pls_change')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///categories_rules.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['UPLOAD_FOLDER'] = 'uploads'
+    app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-    db.init_app(app) # Initialize db with the app
+    # Ensure upload folder exists and has correct permissions
+    if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        os.makedirs(app.config['UPLOAD_FOLDER'], mode=0o755)
+        app.logger.info(f"Created uploads directory: {app.config['UPLOAD_FOLDER']}")
 
+    # --- Initialize Extensions ---
+    db.init_app(app)
+    Migrate(app, db)
+
+    # --- Routes ---
     @app.route('/')
-    def index():
-        try:
-            current_year = datetime.now().year
-            current_month = datetime.now().month
+    def home():
+        # Get sorting parameters from URL
+        sort_by = request.args.get('sort_by', 'date')  # Default sort by date
+        sort_order = request.args.get('sort_order', 'desc')  # Default descending order
 
-            year = request.args.get('year', current_year, type=int)
-            month = request.args.get('month', current_month, type=int)
+        # Validate sort_by parameter to prevent SQLAlchemy errors
+        valid_columns = ['date', 'description', 'amount', 'account_source', 'category']
+        if sort_by not in valid_columns:
+            sort_by = 'date'
 
-            # Ensure month and year are within reasonable bounds (e.g., month 1-12)
-            if not (1 <= month <= 12):
-                month = current_month # Default to current month if invalid
-            # Add year validation if necessary, e.g., if year < 2000 or year > current_year + 5: year = current_year
+        # Validate sort_order parameter
+        if sort_order not in ['asc', 'desc']:
+            sort_order = 'desc'
 
-            # Fetch transactions for the selected month and year
-            transactions_for_month = db.session.query(Transaction).filter(
-                extract('year', Transaction.date) == year,
-                extract('month', Transaction.date) == month
-            ).order_by(Transaction.date.desc()).all()
+        # Get current month's transactions
+        today = date.today()
+        start_date = date(today.year, today.month, 1)
+        end_date = date(today.year, today.month + 1, 1) if today.month < 12 else date(today.year + 1, 1, 1)
 
-            # Calculate totals for the selected month
-            total_spending_for_month = 0
-            total_income_for_month = 0
-            spending_by_category = defaultdict(float)
-            for t in transactions_for_month:
-                if t.amount < 0: # Expenses
-                    total_spending_for_month += abs(t.amount)
-                    category = t.category if t.category else "Uncategorized"
-                    spending_by_category[category] += abs(t.amount)
-                elif t.amount > 0: # Income
-                    total_income_for_month += t.amount
+        # Build the query with sorting
+        query = Transaction.query.filter(
+            Transaction.date >= start_date,
+            Transaction.date < end_date
+        )
 
-            net_balance_for_month = total_income_for_month - total_spending_for_month
+        # Apply sorting based on column
+        if sort_by == 'date':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.date.asc())
+            else:
+                query = query.order_by(Transaction.date.desc())
+        elif sort_by == 'description':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.description.asc())
+            else:
+                query = query.order_by(Transaction.description.desc())
+        elif sort_by == 'amount':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.amount.asc())
+            else:
+                query = query.order_by(Transaction.amount.desc())
+        elif sort_by == 'account_source':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.account_source.asc())
+            else:
+                query = query.order_by(Transaction.account_source.desc())
+        elif sort_by == 'category':
+            # For category sorting, we need to join with Category table
+            from sqlalchemy import func
+            if sort_order == 'asc':
+                query = query.outerjoin(Category).order_by(func.coalesce(Category.name, 'Uncategorized').asc())
+            else:
+                query = query.outerjoin(Category).order_by(func.coalesce(Category.name, 'Uncategorized').desc())
 
-            chart_labels = list(spending_by_category.keys())
-            chart_data = list(spending_by_category.values())
+        transactions = query.all()
 
-            # Get top 7 spending categories
-            sorted_spending = sorted(spending_by_category.items(), key=lambda item: item[1], reverse=True)
-            top_7_spending_categories = sorted_spending[:7]
+        # Calculate totals by category
+        category_totals = defaultdict(float)
+        expense_categories = defaultdict(float)
 
-            # Get month name for display
-            month_name = calendar.month_name[month]
+        for transaction in transactions:
+            category_name = transaction.category.name if transaction.category else 'Uncategorized'
+            category_totals[category_name] += transaction.amount
 
-            # Basic next/prev month logic
-            prev_month_date = date(year, month, 1) - timedelta(days=1)
-            next_month_date = date(year, month, 28) + timedelta(days=4) # Go to approx end of month then add 4 days to ensure next month
-            next_month_date = next_month_date.replace(day=1) # First day of next month
+            # Only track expenses for charts (negative amounts)
+            if transaction.amount < 0:
+                expense_categories[category_name] += abs(transaction.amount)  # Convert to positive for chart
 
-            prev_month_params = {'year': prev_month_date.year, 'month': prev_month_date.month}
-            next_month_params = {'year': next_month_date.year, 'month': next_month_date.month}
+        # Calculate income and expenses
+        total_income = sum(amount for amount in (t.amount for t in transactions) if amount > 0)
+        total_expenses = sum(amount for amount in (t.amount for t in transactions) if amount < 0)
+        net_amount = total_income + total_expenses  # expenses are negative
 
-            return render_template(
-                'index.html',
-                transactions=transactions_for_month,
-                chart_labels=json.dumps(chart_labels),
-                chart_data=json.dumps(chart_data),
-                selected_year=year,
-                selected_month=month,
-                selected_month_name=month_name,
-                total_spending_for_month=total_spending_for_month,
-                total_income_for_month=total_income_for_month,
-                net_balance_for_month=net_balance_for_month,
-                top_7_spending_categories=top_7_spending_categories,
-                prev_month_params=prev_month_params,
-                next_month_params=next_month_params
-            )
-        except Exception as e:
-            print(f"Error in index route: {e}")
-            flash("An error occurred while loading the dashboard. Please try again.", "error")
-            # Render with minimal context or redirect to a safe page
-            return render_template('index.html', transactions=[], chart_labels='[]', chart_data='[]',
-                                   selected_year=datetime.now().year, selected_month=datetime.now().month,
-                                   selected_month_name=calendar.month_name[datetime.now().month],
-                                   total_spending_for_month=0, total_income_for_month=0, net_balance_for_month=0,
-                                   top_7_spending_categories=[],
-                                   prev_month_params={}, next_month_params={})
+        # Prepare chart data for JavaScript
+        expense_chart_data = {
+            'labels': list(expense_categories.keys()),
+            'data': list(expense_categories.values())
+        }
+
+        # Prepare bar chart data (Income vs Expenses)
+        bar_chart_data = {
+            'labels': ['Income', 'Expenses'],
+            'data': [total_income, abs(total_expenses)]
+        }
+
+        # Get top 5 spending categories
+        top_spending_categories = sorted(
+            expense_categories.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:5]
+
+        return render_template('index.html',
+                            transactions=transactions,
+                            category_totals=dict(category_totals),
+                            total_income=total_income,
+                            total_expenses=abs(total_expenses),
+                            net_amount=net_amount,
+                            current_month=calendar.month_name[today.month],
+                            current_year=today.year,
+                            current_sort_by=sort_by,
+                            current_sort_order=sort_order,
+                            expense_chart_data=json.dumps(expense_chart_data),
+                            bar_chart_data=json.dumps(bar_chart_data),
+                            top_spending_categories=top_spending_categories)
 
     @app.route('/upload', methods=['POST'])
-    def upload_files():
-        if 'files[]' not in request.files:
+    def upload_file():
+        if 'file' not in request.files:
+            app.logger.warning("No file part in request")
             flash('No file part', 'error')
-            return redirect(request.url)
+            return redirect(url_for('home'))
 
-        files = request.files.getlist('files[]')
+        file = request.files['file']
+        if file.filename == '':
+            app.logger.warning("No selected file")
+            flash('No selected file', 'error')
+            return redirect(url_for('home'))
 
-        if not files or files[0].filename == '':
-            flash('No selected files', 'error')
-            return redirect(request.url)
+        if file:
+            try:
+                # Ensure upload folder exists (in case it was deleted)
+                if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                    os.makedirs(app.config['UPLOAD_FOLDER'], mode=0o755)
+                    app.logger.info(f"Re-created uploads directory: {app.config['UPLOAD_FOLDER']}")
 
-        newly_added_count = 0
-        skipped_duplicates_count = 0
-        error_files = []
-        processed_files_count = 0
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                app.logger.info(f"Saving uploaded file: {filename} to {filepath}")
+                file.save(filepath)
 
-        for file_item in files:
-            if file_item and file_item.filename:
-                filename = secure_filename(file_item.filename)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file_item.save(file_path)
-                processed_files_count +=1
+                if not os.path.exists(filepath):
+                    app.logger.error(f"File was not saved successfully: {filepath}")
+                    flash('Error saving file', 'error')
+                    return redirect(url_for('home'))
+
+                app.logger.info(f"File saved successfully, size: {os.path.getsize(filepath)} bytes")
 
                 try:
-                    potential_transactions = process_uploaded_file(file_path, filename)
-                    transactions_to_add = []
+                    app.logger.info(f"Processing file: {filename}")
+                    transactions = process_uploaded_file(filepath, filename)
+                    app.logger.info(f"Found {len(transactions)} transactions to add")
 
-                    if potential_transactions:
-                        for pt in potential_transactions:
-                            # Check for duplicates before adding
-                            exists = db.session.query(Transaction).filter_by(
-                                date=pt.date,
-                                description=pt.description,
-                                amount=pt.amount,
-                                account_source=pt.account_source
+                    if transactions:
+                        added_count = 0
+                        duplicate_count = 0
+
+                        for transaction in transactions:
+                            # Check for duplicate transactions with same description, amount, and date
+                            existing_transaction = Transaction.query.filter_by(
+                                description=transaction.description,
+                                amount=transaction.amount,
+                                date=transaction.date
                             ).first()
 
-                            if not exists:
-                                transactions_to_add.append(pt)
+                            if existing_transaction:
+                                duplicate_count += 1
+                                app.logger.debug(f"Skipping duplicate transaction: {transaction.description}, {transaction.amount}, {transaction.date}")
                             else:
-                                skipped_duplicates_count += 1
+                                app.logger.debug(f"Adding transaction: {transaction.description}, {transaction.amount}, {transaction.category_id}")
+                                db.session.add(transaction)
+                                added_count += 1
 
-                        if transactions_to_add:
-                            db.session.add_all(transactions_to_add)
-                            db.session.commit()
-                            newly_added_count += len(transactions_to_add)
-                            # Flash per file success is now handled in the summary below
-                        # else: # All were duplicates or no valid transactions
-                            # No specific flash here, summary will cover it
-                    #else: # No transactions parsed from file
-                        # No specific flash here, summary will cover it
+                        db.session.commit()
+
+                        if duplicate_count > 0:
+                            app.logger.info(f"Successfully added {added_count} new transactions, skipped {duplicate_count} duplicates")
+                            flash(f'Successfully processed {added_count} new transactions. Skipped {duplicate_count} duplicate transactions.', 'success')
+                        else:
+                            app.logger.info(f"Successfully added {added_count} transactions")
+                            flash(f'Successfully processed {added_count} transactions', 'success')
+                    else:
+                        app.logger.warning("No transactions found in file")
+                        flash('No transactions found in the file', 'info')
 
                 except Exception as e:
                     db.session.rollback()
-                    print(f"Error processing file {filename}: {e}")
-                    flash(f'Error processing file {filename}. Check logs.', 'error')
-                    error_files.append(filename)
-            else:
-                flash('Encountered an issue with one of the uploaded files (e.g., no filename).', 'warning')
+                    app.logger.error(f"Error processing file: {e}")
+                    flash(f'Error processing file: {str(e)}', 'error')
 
-        # Consolidated Flash Messages
-        if newly_added_count > 0:
-            flash(f'Successfully imported {newly_added_count} new transactions.', 'success')
-        if skipped_duplicates_count > 0:
-            flash(f'Skipped {skipped_duplicates_count} duplicate transactions.', 'info')
-        if error_files:
-            flash(f'Errors occurred with files: {", ".join(error_files)}. Check logs.', 'error')
-        if processed_files_count > 0 and newly_added_count == 0 and skipped_duplicates_count == 0 and not error_files:
-             flash('Files processed, but no new transactions were imported (they may all be duplicates or files were empty/unparseable).', 'info')
-        elif processed_files_count == 0 and not error_files:
-            # This case should ideally be caught by earlier checks, but as a fallback.
-            if not request.files.getlist('files[]')[0].filename: # If initial check for no selected files passed due to empty filename string
-                 pass # Already flashed "No selected files"
-            else:
-                flash('No files were processed.', 'info')
+            except Exception as e:
+                app.logger.error(f"Error handling upload: {e}")
+                flash(f'Error handling file: {str(e)}', 'error')
+            finally:
+                # Clean up the uploaded file
+                if os.path.exists(filepath):
+                    try:
+                        os.remove(filepath)
+                        app.logger.debug(f"Cleaned up file: {filepath}")
+                    except Exception as e:
+                        app.logger.error(f"Error cleaning up file {filepath}: {e}")
 
-        # The redirect for upload_files should be after all flash messages:
-        current_redirect_year = datetime.now().year
-        current_redirect_month = datetime.now().month
-        # If new transactions were added, try to redirect to the month of the first new transaction if possible,
-        # otherwise default to current month. This is a bit more complex to get right here as transactions_to_add is in a loop.
-        # For simplicity, defaulting to current month after uploads.
-        return redirect(url_for('index', year=current_redirect_year, month=current_redirect_month))
+        return redirect(url_for('home'))
 
-    @app.route('/add_manual', methods=['GET', 'POST'])
-    def add_transaction_manual():
+    @app.route('/add-transaction', methods=['GET', 'POST'])
+    def add_transaction():
         if request.method == 'POST':
             try:
-                date_str = request.form['date']
+                # Parse the date
+                transaction_date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
                 description = request.form['description']
-                amount_str = request.form['amount']
+                amount = float(request.form['amount'])
                 account_source = request.form['account_source']
-                category_manual = request.form.get('category') # User-provided category
+                category_id = request.form.get('category_id')  # This will be None if no category selected
 
-                if not date_str or not description or not amount_str or not account_source:
-                    flash('Date, Description, Amount, and Account Source are required.', 'error')
-                    # Pass back form data to avoid user re-entering everything
-                    return render_template('add_transaction_manual.html', form_data=request.form, categories=get_defined_categories())
+                # Check for duplicate transactions with same description, amount, and date
+                existing_transaction = Transaction.query.filter_by(
+                    description=description,
+                    amount=amount,
+                    date=transaction_date
+                ).first()
 
-                transaction_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                amount = float(amount_str)
+                if existing_transaction:
+                    flash('A transaction with the same description, amount, and date already exists.', 'warning')
+                    app.logger.debug(f"Attempted to add duplicate transaction: {description}, {amount}, {transaction_date}")
+                    # Don't redirect, show the form again with the error message
+                    categories = Category.query.order_by(Category.name).all()
+                    return render_template('add_transaction_manual.html',
+                                         categories=categories,
+                                         today=date.today(),
+                                         form_data=request.form)
 
-                final_category = category_manual
-                if not final_category and description: # If user didn't provide category, try to auto-assign
-                    final_category = assign_category(description)
-
+                # Create new transaction
                 new_transaction = Transaction(
                     date=transaction_date,
                     description=description,
                     amount=amount,
                     account_source=account_source,
-                    category=final_category if final_category else None
+                    category_id=category_id
                 )
+
                 db.session.add(new_transaction)
                 db.session.commit()
-                flash('Manual transaction added successfully!', 'success')
-                return redirect(url_for('index', year=transaction_date.year, month=transaction_date.month))
-            except ValueError:
-                flash('Invalid data submitted. Amount must be a number and Date must be valid.', 'error')
-                return render_template('add_transaction_manual.html', form_data=request.form, categories=get_defined_categories())
+
+                flash('Transaction added successfully!', 'success')
+                return redirect(url_for('home'))
             except Exception as e:
-                flash(f'An error occurred: {str(e)}', 'error')
                 db.session.rollback()
-                return render_template('add_transaction_manual.html', form_data=request.form, categories=get_defined_categories())
+                flash(f'Error adding transaction: {str(e)}', 'error')
+                app.logger.error(f'Error adding transaction: {e}')
 
-        return render_template('add_transaction_manual.html', form_data={}, categories=get_defined_categories())
+        # For GET request, show the form
+        categories = Category.query.order_by(Category.name).all()
+        return render_template('add_transaction_manual.html',
+                             categories=categories,
+                             today=date.today())
 
-    @app.route('/edit/<int:transaction_id>', methods=['GET', 'POST'])
+    @app.route('/edit-transaction/<int:transaction_id>', methods=['GET', 'POST'])
     def edit_transaction(transaction_id):
-        transaction = db.session.get(Transaction, transaction_id)
-        defined_categories = get_defined_categories()
-        if not transaction:
-            flash('Transaction not found.', 'error')
-            return redirect(url_for('index'))
+        transaction = Transaction.query.get_or_404(transaction_id)
 
         if request.method == 'POST':
             try:
@@ -245,70 +299,241 @@ def create_app():
                 transaction.description = request.form['description']
                 transaction.amount = float(request.form['amount'])
                 transaction.account_source = request.form['account_source']
-                new_category = request.form.get('category')
-
-                if not new_category or new_category == "__None__": # Check for special value for None
-                    transaction.category = assign_category(transaction.description)
-                else:
-                    transaction.category = new_category
+                category_id = request.form.get('category_id')
+                transaction.category_id = category_id if category_id else None
 
                 db.session.commit()
                 flash('Transaction updated successfully!', 'success')
-                return redirect(url_for('index', year=transaction.date.year, month=transaction.date.month))
-            except ValueError:
-                flash('Invalid data. Please check amount and date.', 'error')
-                return render_template('edit_transaction.html', transaction=transaction, form_data=request.form, categories=defined_categories)
+                return redirect(url_for('home'))
             except Exception as e:
+                db.session.rollback()
                 flash(f'Error updating transaction: {str(e)}', 'error')
-                db.session.rollback()
-                return render_template('edit_transaction.html', transaction=transaction, form_data=request.form, categories=defined_categories)
+                app.logger.error(f'Error updating transaction: {e}')
 
-        return render_template('edit_transaction.html', transaction=transaction, form_data={}, categories=defined_categories)
+        categories = Category.query.order_by(Category.name).all()
+        return render_template('edit_transaction.html',
+                             transaction=transaction,
+                             categories=categories)
 
-    @app.route('/delete/<int:transaction_id>', methods=['POST'])
+    @app.route('/delete-transaction/<int:transaction_id>', methods=['POST'])
     def delete_transaction(transaction_id):
-        transaction = db.session.get(Transaction, transaction_id)
-        if transaction:
-            try:
-                # Store date before deleting to redirect to the correct month
-                redirect_year = transaction.date.year
-                redirect_month = transaction.date.month
-                db.session.delete(transaction)
-                db.session.commit()
-                flash('Transaction deleted successfully!', 'success')
-                return redirect(url_for('index', year=redirect_year, month=redirect_month))
-            except Exception as e:
-                db.session.rollback()
-                flash(f'Error deleting transaction: {str(e)}', 'error')
-        else:
-            flash('Transaction not found.', 'error')
-        return redirect(url_for('index'))
+        transaction = Transaction.query.get_or_404(transaction_id)
+        try:
+            db.session.delete(transaction)
+            db.session.commit()
+            flash('Transaction deleted successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error deleting transaction: {str(e)}', 'error')
+            app.logger.error(f'Error deleting transaction: {e}')
+        return redirect(url_for('home'))
 
-    @app.route('/delete_all', methods=['POST'])
+    @app.route('/delete-all-transactions', methods=['POST'])
     def delete_all_transactions():
         try:
-            num_rows_deleted = db.session.query(Transaction).delete()
-            db.session.commit()
-            if num_rows_deleted > 0:
-                flash(f'Successfully deleted all {num_rows_deleted} transactions!', 'success')
-            else:
+            transaction_count = Transaction.query.count()
+            if transaction_count == 0:
                 flash('No transactions to delete.', 'info')
+                return redirect(url_for('home'))
+
+            Transaction.query.delete()
+            db.session.commit()
+            flash(f'Successfully deleted all {transaction_count} transactions!', 'success')
+            app.logger.info(f'Deleted all {transaction_count} transactions')
         except Exception as e:
             db.session.rollback()
             flash(f'Error deleting all transactions: {str(e)}', 'error')
-        # For delete_all and upload, redirecting to current month is a sensible default
-        # as these actions aren't tied to a specific transaction's month.
-        return redirect(url_for('index', year=datetime.now().year, month=datetime.now().month))
+            app.logger.error(f'Error deleting all transactions: {e}')
+        return redirect(url_for('home'))
+
+    # Keep existing category management routes
+    @app.route('/manage-categories')
+    def serve_category_manager_html():
+        return render_template('category_manager.html')
+
+    # Keep all existing category API endpoints
+    @app.route('/api/categories', methods=['GET'])
+    def get_categories():
+        try:
+            categories = Category.query.order_by(Category.name).all()
+            return jsonify([category.to_dict() for category in categories])
+        except Exception as e:
+            app.logger.error(f"Error getting categories: {e}")
+            return jsonify({"error": "Failed to retrieve categories"}), 500
+
+    @app.route('/api/categories', methods=['POST'])
+    def add_category():
+        data = request.get_json()
+        if not data or not data.get('name') or not data.get('name').strip():
+            return jsonify({'error': 'Category name is required and cannot be empty'}), 400
+
+        name = data['name'].strip()
+        if Category.query.filter(db.func.lower(Category.name) == db.func.lower(name)).first():
+            return jsonify({'error': f'Category named "{name}" already exists (case-insensitive).'}), 409
+
+        try:
+            new_category = Category(name=name)
+            db.session.add(new_category)
+            db.session.commit()
+            app.logger.info(f"Added category: {name}")
+            return jsonify(new_category.to_dict()), 201
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error adding category {name}: {e}")
+            return jsonify({"error": f"Failed to add category {name}"}), 500
+
+    @app.route('/api/categories/<int:category_id>', methods=['PUT'])
+    def update_category(category_id):
+        category = Category.query.get_or_404(category_id)
+        data = request.get_json()
+        if not data or not data.get('name') or not data.get('name').strip():
+            return jsonify({'error': 'New category name is required and cannot be empty'}), 400
+
+        new_name = data['name'].strip()
+        existing_category = Category.query.filter(
+            db.func.lower(Category.name) == db.func.lower(new_name)
+        ).filter(Category.id != category_id).first()
+
+        if existing_category:
+            return jsonify({'error': f'Another category named "{new_name}" already exists (case-insensitive).'}), 409
+
+        try:
+            category.name = new_name
+            db.session.commit()
+            app.logger.info(f"Updated category ID {category_id} to: {new_name}")
+            return jsonify(category.to_dict())
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error updating category ID {category_id}: {e}")
+            return jsonify({"error": f"Failed to update category {category.name}"}), 500
+
+    @app.route('/api/categories/<int:category_id>', methods=['DELETE'])
+    def delete_category(category_id):
+        category = Category.query.get_or_404(category_id)
+        try:
+            category_name = category.name
+            db.session.delete(category)
+            db.session.commit()
+            app.logger.info(f"Deleted category: {category_name} (ID: {category_id})")
+            return jsonify({'message': f'Category "{category_name}" deleted successfully'}), 200
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting category ID {category_id}: {e}")
+            return jsonify({"error": f"Failed to delete category {category.name}"}), 500
+
+    @app.route('/api/categories/<int:category_id>/rules', methods=['POST'])
+    def add_rule_to_category(category_id):
+        category = Category.query.get_or_404(category_id)
+        data = request.get_json()
+        if not data or not data.get('keyword_pattern') or not data.get('keyword_pattern').strip():
+            return jsonify({'error': 'Keyword pattern is required and cannot be empty'}), 400
+
+        keyword = data['keyword_pattern'].strip()
+        if Rule.query.filter_by(category_id=category_id, keyword_pattern=keyword).first():
+            return jsonify({'error': f'Keyword "{keyword}" already exists for category "{category.name}".'}), 409
+
+        try:
+            new_rule = Rule(keyword_pattern=keyword, category_id=category.id)
+            db.session.add(new_rule)
+            db.session.commit()
+            app.logger.info(f"Added rule '{keyword}' to category: {category.name}")
+            return jsonify(category.to_dict()), 201
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error adding rule '{keyword}' to category {category.name}: {e}")
+            return jsonify({"error": f"Failed to add rule to category {category.name}"}), 500
+
+    @app.route('/api/rules/<int:rule_id>', methods=['PUT'])
+    def update_rule(rule_id):
+        rule = Rule.query.get_or_404(rule_id)
+        data = request.get_json()
+        if not data or not data.get('keyword_pattern') or not data.get('keyword_pattern').strip():
+            return jsonify({'error': 'New keyword pattern is required and cannot be empty'}), 400
+
+        new_keyword = data['keyword_pattern'].strip()
+        existing_rule = Rule.query.filter_by(
+            category_id=rule.category_id,
+            keyword_pattern=new_keyword
+        ).filter(Rule.id != rule_id).first()
+
+        if existing_rule:
+            category_name = rule.category.name
+            return jsonify({'error': f'Keyword "{new_keyword}" already exists for category "{category_name}".'}), 409
+
+        try:
+            original_keyword = rule.keyword_pattern
+            rule.keyword_pattern = new_keyword
+            db.session.commit()
+            app.logger.info(f"Updated rule ID {rule_id} from '{original_keyword}' to '{new_keyword}'")
+            updated_category = Category.query.get(rule.category_id)
+            return jsonify(updated_category.to_dict())
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error updating rule ID {rule_id}: {e}")
+            return jsonify({"error": "Failed to update rule"}), 500
+
+    @app.route('/api/rules/<int:rule_id>', methods=['DELETE'])
+    def delete_rule(rule_id):
+        rule = Rule.query.get_or_404(rule_id)
+        try:
+            category_id = rule.category_id
+            keyword_pattern = rule.keyword_pattern
+            db.session.delete(rule)
+            db.session.commit()
+            app.logger.info(f"Deleted rule: {keyword_pattern} (ID: {rule_id}) from category ID {category_id}")
+            category = Category.query.get(category_id)
+            return jsonify(category.to_dict()), 200
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting rule ID {rule_id}: {e}")
+            return jsonify({"error": "Failed to delete rule"}), 500
+
+    # --- CLI commands for DB management ---
+    @app.cli.command("init-db")
+    def init_db_command():
+        db.create_all()
+        app.logger.info("Initialized the database and created/updated tables based on models.")
+        app.logger.info("To manage database migrations for production, use: flask db init, flask db migrate, flask db upgrade")
+
+        if not Category.query.first():
+            app.logger.info("Database is empty. Seeding default categories and rules...")
+            default_categories_rules = {
+                "Groceries": ["superstore", "save on foods", "wal-mart groceries"],
+                "Dining Out/Cafe": ["mcdonald's", "tim hortons", "starbucks", "subway", "pizza"],
+                "Food Delivery": ["uber eats", "doordash", "skipTheDishes"],
+                "Bills/Utilities": ["fido mobile", "fortisbc energy", "hydro"],
+                "Subscriptions/Entertainment": ["netflix.com", "spotify", "disney plus"],
+                "Subscriptions/Services": ["apple.com/bill", "google cloud"],
+                "Shopping/Online": ["amazon.ca", "temu.com", "ebay"],
+                "Shopping/General Merchandise": ["wal-mart", "dollarama", "winners"],
+                "Healthcare": ["pharmacy", "clinic", "dental"],
+                "Insurance": ["icbc", "square one insurance", "life insurance"],
+                "Car": ["gas station", "esso", "shell", "petro-canada", "mechanic", "car wash"],
+                "Investments": ["questrade", "wealthsimple"],
+                "Transfers": ["e-transfer", "send money"],
+                "Credit Card Payment": ["payment - thank you", "cibc visa payment", "td mc payment"],
+                "Housing": ["rent", "mortgage", "strata fee"],
+                "Childcare/Education": ["daycare", "school fees"],
+                "Travel": ["expedia", "booking.com", "airbnb", "flights"],
+                "Miscellaneous": ["misc", "other"]
+            }
+            for cat_name, rules_list in default_categories_rules.items():
+                category = Category(name=cat_name)
+                db.session.add(category)
+                db.session.flush()
+                for rule_kw in rules_list:
+                    rule = Rule(keyword_pattern=rule_kw, category_id=category.id)
+                    db.session.add(rule)
+            db.session.commit()
+            app.logger.info("Successfully seeded default categories and rules.")
 
     with app.app_context():
-        # Ensure the upload folder exists
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])
-        db.create_all() # Create database tables if they don't exist
+        db.create_all()
 
     return app
 
-app = create_app() # Create the app instance for flask run and other tools
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    application = create_app()
+    application.run(debug=True, port=5001)
