@@ -1,31 +1,50 @@
 :root {
-    --primary-color: #3949AB; /* Indigo */
-    --primary-dark-color: #283593; /* Darker Indigo */
-    --accent-color: #FF7043; /* Deep Orange Accent */
-    --accent-hover-color: #F4511E; /* Darker Orange for hover */
-    --light-gray-color: #F5F5F5;
-    --medium-gray-color: #E0E0E0;
-    --dark-gray-color: #424242;
-    --text-color: #212121;
-    --text-light-color: #757575;
-    --white-color: #FFFFFF;
-    --success-color: #4CAF50;
-    --error-color: #F44336;
-    --info-color: #2196F3;
-    --warning-color: #FFC107;
+    /* Modern color palette */
+    --primary-color: #4F46E5; /* Indigo */
+    --primary-light-color: #6366F1;
+    --primary-dark-color: #4338CA;
+    --accent-color: #F97316; /* Orange */
+    --accent-light-color: #FB923C;
+    --accent-hover-color: #EA580C;
 
+    /* Neutrals */
+    --white-color: #FFFFFF;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --gray-900: #111827;
+
+    /* Semantic colors */
+    --success-color: #10B981; /* Emerald */
+    --error-color: #EF4444;   /* Red */
+    --info-color: #3B82F6;    /* Blue */
+    --warning-color: #F59E0B; /* Amber */
+
+    /* Typography */
     --font-family: 'Poppins', sans-serif;
-    --border-radius: 8px;
-    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --transition-speed: 0.3s ease;
+
+    /* UI Elements */
+    --border-radius-sm: 0.25rem;
+    --border-radius: 0.5rem;
+    --border-radius-lg: 0.75rem;
+    --box-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --transition-speed: 0.2s ease;
 }
 
 body {
     font-family: var(--font-family);
     margin: 0;
     padding: 0;
-    background-color: var(--light-gray-color);
-    color: var(--text-color);
+    background-color: var(--gray-100);
+    color: var(--gray-800);
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -33,77 +52,89 @@ body {
 }
 
 header {
-    background-color: var(--primary-color);
-    color: var(--white-color);
+    background-color: var(--white-color);
+    color: var(--gray-900);
     padding: 1rem 2rem;
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--box-shadow-sm);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--gray-200);
 }
 
 header h1 {
     margin: 0;
-    font-size: 2rem;
-    font-weight: 600;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-color);
 }
 
 header nav {
-    margin-top: 0; /* Reset from previous */
+    display: flex;
+    gap: 1rem;
 }
 
 header nav a {
-    color: var(--white-color);
-    margin: 0 10px;
+    color: var(--gray-700);
     text-decoration: none;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 500;
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;
     border-radius: var(--border-radius);
-    transition: background-color var(--transition-speed);
+    transition: all var(--transition-speed);
 }
 
 header nav a:hover, header nav a.active {
-    background-color: var(--primary-dark-color);
+    background-color: var(--gray-100);
+    color: var(--primary-color);
 }
 
 main {
     flex-grow: 1;
-    padding: 2rem;
-    max-width: 1200px; /* Wider for modern look */
-    width: 90%;
-    margin: 2rem auto;
-    background-color: transparent; /* Sections will have their own background */
+    padding: 1.5rem;
+    max-width: 1200px;
+    width: 92%;
+    margin: 1rem auto;
+    background-color: transparent;
 }
 
 footer {
-    background-color: var(--dark-gray-color);
-    color: var(--light-gray-color);
+    background-color: var(--white-color);
+    color: var(--gray-500);
     text-align: center;
-    padding: 1.5rem 0;
-    margin-top: auto; /* Pushes footer to bottom */
-    font-size: 0.9rem;
+    padding: 1.25rem 0;
+    margin-top: auto;
+    font-size: 0.85rem;
+    border-top: 1px solid var(--gray-200);
 }
 
-/* Add more styles as we build out components */
-
-.upload-section, .transactions-section, .form-section, .chart-section, .dashboard-summary {
+/* Section Cards */
+.upload-section,
+.transactions-section,
+.form-section,
+.chart-section,
+.dashboard-summary {
     background-color: var(--white-color);
-    padding: 2rem;
-    margin-bottom: 2rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
+    border: 1px solid var(--gray-200);
 }
 
-.upload-section h2, .transactions-section h2, .form-section h2, .chart-section h2, .dashboard-summary h2 {
+.upload-section h2,
+.transactions-section h2,
+.form-section h2,
+.chart-section h2,
+.dashboard-summary h2 {
     margin-top: 0;
-    color: var(--primary-color);
-    border-bottom: 2px solid var(--accent-color);
-    padding-bottom: 0.75rem;
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
+    color: var(--gray-800);
+    font-size: 1.25rem;
     font-weight: 600;
+    margin-bottom: 1.25rem;
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 /* Form Styles */
@@ -111,7 +142,8 @@ form label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: var(--text-light-color);
+    color: var(--gray-700);
+    font-size: 0.95rem;
 }
 
 form input[type="text"],
@@ -121,18 +153,21 @@ form input[type="file"],
 form select,
 form textarea {
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.65rem 0.85rem;
     margin-bottom: 1.25rem;
-    border: 1px solid var(--medium-gray-color);
+    border: 1px solid var(--gray-300);
     border-radius: var(--border-radius);
     box-sizing: border-box;
     font-family: var(--font-family);
-    font-size: 1rem;
-    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+    font-size: 0.95rem;
+    transition: all var(--transition-speed);
+    background-color: var(--white-color);
+    color: var(--gray-800);
 }
 
 form input[type="file"] {
-    padding: 0.5rem; /* Specific padding for file input */
+    padding: 0.5rem;
+    background-color: var(--gray-50);
 }
 
 form input[type="text"]:focus,
@@ -141,225 +176,314 @@ form input[type="date"]:focus,
 form input[type="file"]:focus,
 form select:focus,
 form textarea:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.2); /* Light Indigo shadow */
+    border-color: var(--primary-light-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
     outline: none;
 }
 
 /* Button Styles */
 .btn,
-form button[type="submit"] { /* Apply .btn styles to submit buttons too */
-    background-color: var(--accent-color);
+form button[type="submit"] {
+    background-color: var(--primary-color);
     color: var(--white-color);
-    padding: 0.75rem 1.5rem;
+    padding: 0.65rem 1.25rem;
     border: none;
     border-radius: var(--border-radius);
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 500;
     text-decoration: none;
     display: inline-block;
     text-align: center;
-    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    transition: all var(--transition-speed);
     font-family: var(--font-family);
-    box-sizing: border-box; /* Ensure consistent box sizing */
+    box-sizing: border-box;
 }
 
 .btn:hover,
 form button[type="submit"]:hover {
-    background-color: var(--accent-hover-color);
-    transform: translateY(-2px);
+    background-color: var(--primary-dark-color);
+    transform: translateY(-1px);
+    box-shadow: var(--box-shadow-sm);
 }
 
 .btn-small {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
 }
 
 .btn-edit {
-    background-color: var(--info-color);
-    color: var(--white-color);
+    background-color: transparent;
+    color: var(--info-color);
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
 }
 
 .btn-edit:hover {
-    background-color: #1976D2; /* Darker Info Blue */
+    background-color: transparent;
+    color: #2563EB;
+    transform: none;
+}
+
+/* Style for the Edit button to include a pencil icon */
+.btn-edit::before {
+    content: "✎";
+    display: inline-block;
+    margin-right: 0.35em;
+    font-size: 1.1em;
 }
 
 .btn-delete {
-    background-color: transparent; /* Remove background */
-    color: var(--error-color); /* SVG will inherit this color */
-    border: none; /* Remove border */
-    padding: 0.25em; /* Minimal padding around the icon */
-    box-shadow: none; /* Remove any inherited box shadow */
+    background-color: transparent;
+    color: var(--error-color);
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.5rem;
+    width: 1.5rem;
 }
 
 .btn-delete:hover {
-    background-color: transparent; /* Ensure no background on hover */
-    color: #D32F2F; /* Darker Error Red for icon color on hover */
-    transform: none; /* Remove transform from general .btn hover */
-}
-
-/* Ensure SVG icon inherits color and is sized appropriately within buttons */
-.btn svg {
-    display: inline-block;
-    vertical-align: middle;
-    width: 1.2em; /* Adjust size as needed */
-    height: 1.2em; /* Adjust size as needed */
-    fill: currentColor; /* Inherit color from button text (white in this case) */
+    background-color: transparent;
+    color: #B91C1C;
+    transform: none;
 }
 
 .btn-delete svg {
-    /* Specific adjustments for delete icon if needed, otherwise inherits from .btn svg */
+    width: 1.2rem;
+    height: 1.2rem;
+    fill: var(--error-color);
+}
+
+.btn-delete:hover svg {
+    fill: #B91C1C;
+}
+
+/* SVG icon styles */
+.btn svg {
+    display: inline-block;
+    vertical-align: middle;
+    width: 1.2em;
+    height: 1.2em;
+    fill: currentColor;
 }
 
 /* Table Styles */
 table {
     width: 100%;
-    border-collapse: separate; /* Allows for border-radius on cells if needed */
+    border-collapse: separate;
     border-spacing: 0;
-    margin-top: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-top: 1rem;
+    box-shadow: var(--box-shadow-sm);
     border-radius: var(--border-radius);
-    overflow: hidden; /* Ensures border-radius clips content */
+    overflow: hidden;
+    font-size: 0.95rem;
 }
 
 th, td {
-    border-bottom: 1px solid var(--medium-gray-color);
-    padding: 1rem;
+    padding: 0.85rem 1rem;
     text-align: left;
     vertical-align: middle;
 }
 
 th {
-    background-color: var(--light-gray-color);
-    color: var(--primary-color);
+    background-color: var(--gray-50);
+    color: var(--gray-700);
     font-weight: 600;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    font-size: 0.85rem;
     letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--gray-200);
 }
 
 th.sortable {
     cursor: pointer;
+    transition: background-color var(--transition-speed);
 }
 
 th.sortable:hover {
-    background-color: var(--medium-gray-color);
+    background-color: var(--gray-200);
 }
 
 .sort-indicator {
-    font-size: 0.8em; /* Make indicator slightly smaller */
+    font-size: 0.7em;
     margin-left: 5px;
-    display: inline-block; /* Ensures it doesn't break line */
+    display: inline-block;
 }
 
-/* Zebra striping for rows */
+/* Sort Header Styles */
+.sort-header {
+    color: var(--gray-700);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: color var(--transition-speed);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sort-header:hover {
+    color: var(--primary-color);
+}
+
+.sort-header i {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    margin-left: 0.5rem;
+    transition: opacity var(--transition-speed);
+}
+
+.sort-header:hover i {
+    opacity: 1;
+}
+
+tbody tr {
+    border-bottom: 1px solid var(--gray-200);
+}
+
+tbody tr:last-child {
+    border-bottom: none;
+}
+
 tbody tr:nth-child(even) {
     background-color: var(--white-color);
 }
+
 tbody tr:nth-child(odd) {
-    background-color: #FAFAFA; /* Slightly off-white */
+    background-color: var(--gray-50);
 }
 
 tbody tr:hover {
-    background-color: #EEEEEE; /* Light hover for rows */
+    background-color: var(--gray-100);
 }
 
 .transactions-section td.positive {
     color: var(--success-color);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .transactions-section td.negative {
     color: var(--error-color);
-    font-weight: 500;
-}
-
-td a.btn { /* Ensure buttons in table cells are vertically aligned */
-    /* margin-right: 5px; */ /* Will be handled by gap in flex container */
-}
-td form {
-    /* margin-right: 5px; */ /* Will be handled by gap in flex container */
-    margin-bottom: 0; /* Remove any bottom margin if form has it by default */
+    font-weight: 600;
 }
 
 .action-buttons-container {
     display: flex;
-    align-items: center; /* Vertically align items if they have different heights */
-    gap: 5px; /* Space between buttons */
-    flex-wrap: nowrap; /* Prevent wrapping on larger screens by default */
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: nowrap;
 }
 
-.action-buttons-container > * { /* Target direct children (<a> and <form> or <button> if form is display:contents) */
-    flex-shrink: 0; /* Prevent items from shrinking if space is tight */
+.action-buttons-container > * {
+    flex-shrink: 0;
 }
 
 .action-buttons-container form {
-    display: contents; /* Form itself doesn't participate in layout, its children do */
-    /* margin, padding, border, line-height on the form are now irrelevant */
+    display: inline;
+    margin: 0;
+    padding: 0;
+    background: none;
 }
 
 .action-buttons-container form button {
-    /* This button is now effectively a direct child of .action-buttons-container */
-    /* It already has .btn .btn-small .btn-delete applied */
-    margin: 0; /* Ensure no default button margins interfere */
-    /* line-height: normal; is already in .btn, inherited or default */
+    margin: 0;
+    background: none;
+}
+
+.delete-form {
+    margin: 0;
+    padding: 0;
+    display: inline;
+}
+
+.trash-icon {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: var(--error-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trash-icon:hover {
+    color: #B91C1C;
+}
+
+.trash-icon svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    fill: var(--error-color);
+}
+
+.trash-icon:hover svg {
+    fill: #B91C1C;
 }
 
 /* Flash Messages */
 .flash-messages {
     padding: 0;
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 1.25rem 0;
 }
 
 .alert {
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 0.85rem;
     border: 1px solid transparent;
     border-radius: var(--border-radius);
-    text-align: left; /* Changed from center */
-    display: flex; /* For aligning text and close button */
-    justify-content: space-between; /* For aligning text and close button */
-    align-items: center; /* For aligning text and close button */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
 }
 
 .alert-success {
     color: var(--white-color);
     background-color: var(--success-color);
-    border-color: var(--success-color);
 }
 
 .alert-error {
     color: var(--white-color);
     background-color: var(--error-color);
-    border-color: var(--error-color);
 }
 
 .alert-info {
     color: var(--white-color);
     background-color: var(--info-color);
-    border-color: var(--info-color);
 }
 
-.alert-warning { /* Added warning style */
-    color: var(--text-color);
+.alert-warning {
+    color: var(--gray-800);
     background-color: var(--warning-color);
-    border-color: var(--warning-color);
 }
-
 
 .close-btn {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: bold;
     line-height: 1;
-    color: inherit; /* Inherit color from parent .alert for better contrast */
-    text-shadow: none; /* Remove text shadow for flatter look */
+    color: inherit;
     opacity: 0.7;
     cursor: pointer;
     background: none;
     border: none;
-    padding: 0 0 0 15px; /* Add padding to left for spacing */
+    padding: 0 0 0 15px;
 }
 
 .close-btn:hover {
@@ -368,8 +492,8 @@ td form {
 
 /* Dashboard Summary & Month Navigation */
 .dashboard-summary {
-    text-align: center; /* Center the content of this section */
-    /* Removed background-color and padding, sections will handle it if needed */
+    text-align: center;
+    margin-bottom: 1.5rem;
 }
 
 .month-navigation {
@@ -380,247 +504,137 @@ td form {
 }
 
 .month-navigation h2 {
-    margin: 0 1rem; /* Give some space around the title */
-    font-size: 1.6rem; /* Slightly larger title for the month */
-    color: var(--primary-dark-color);
-    border-bottom: none; /* Remove inherited border */
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--gray-800);
+    font-weight: 600;
+    border-bottom: none;
     padding-bottom: 0;
     margin-bottom: 0;
 }
 
 .month-navigation a.btn {
-    background-color: var(--primary-color);
+    background-color: var(--gray-100);
+    color: var(--gray-700);
 }
+
 .month-navigation a.btn:hover {
-    background-color: var(--primary-dark-color);
+    background-color: var(--gray-200);
+    color: var(--gray-900);
 }
 
-.total-spending {
-    margin-top: 1rem;
-}
-
-.total-spending h3 {
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.total-spending h3 .currency.negative {
-    color: var(--error-color);
-}
-.total-spending h3 .currency.positive {
-    color: var(--success-color);
-}
-
-.total-spending h3.balance {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px dashed var(--medium-gray-color);
-}
-
-/* Chart and Top Categories Styling */
-.chart-and-summary-container {
-    display: flex;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    gap: 2rem; /* Space between chart and list */
-    align-items: flex-start; /* Align items to the top */
-}
-
-.chart-container {
-    flex: 2; /* Chart takes more space */
-    min-width: 300px; /* Minimum width for the chart */
-}
-
-.top-categories-container {
-    flex: 1; /* List takes less space */
-    min-width: 250px; /* Minimum width for the list */
-}
-
-.top-categories-container h3 {
-    font-size: 1.2rem;
-    color: var(--primary-dark-color);
-    margin-top: 0; /* Align with chart section's main H2 if possible */
-    margin-bottom: 1rem;
-}
-
-.top-categories-list {
-    /* list-style: none; */ /* Remove this to get default numbering */
-    padding-left: 20px; /* Standard indentation for ordered list numbers */
-    margin: 0;
-}
-
-.top-categories-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.6rem 0;
-    border-bottom: 1px solid var(--light-gray-color);
-    font-size: 0.95rem;
-}
-
-.top-categories-list li:last-child {
-    border-bottom: none;
-}
-
-.top-categories-list .category-name {
-    color: var(--text-color);
-}
-
-.top-categories-list .category-amount {
-    font-weight: 500;
-}
-
-.no-data-message {
-    text-align: center;
-    color: var(--text-light-color);
-    padding: 2rem 0;
-    font-style: italic;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    header {
-        flex-direction: column;
-        padding: 1rem;
-    }
-    header h1 {
-        margin-bottom: 0.5rem;
-        font-size: 1.8rem;
-    }
-    header nav a {
-        margin: 5px;
-        display: block; /* Stack nav links */
-        text-align: center;
-    }
-    main {
-        padding: 1rem;
-        width: 95%;
-    }
-    .upload-section, .transactions-section, .form-section, .chart-section, .dashboard-summary {
-        padding: 1.5rem;
-    }
-    .upload-section h2, .transactions-section h2, .form-section h2, .chart-section h2, .dashboard-summary h2 {
-        font-size: 1.3rem;
-    }
-
-    .month-navigation {
-        flex-direction: column;
-    }
-    .month-navigation h2 {
-        margin-bottom: 0.5rem; /* Space below title when stacked */
-        font-size: 1.4rem;
-    }
-    .month-navigation a.btn {
-        margin-top: 0.5rem;
-        width: auto; /* Don't make nav buttons full width here */
-    }
-    .total-spending h3 {
-        font-size: 1.5rem;
-    }
-
-    .chart-and-summary-container {
-        flex-direction: column; /* Stack chart and list on smaller screens */
-    }
-    .chart-container,
-    .top-categories-container {
-        flex-basis: 100%; /* Each takes full width when stacked */
-        min-width: unset; /* Reset min-width */
-    }
-    .top-categories-container h3 {
-        margin-top: 1.5rem; /* Add some space when stacked below chart */
-    }
-
-    /* Make table more responsive - basic horizontal scroll */
-    .transactions-section {
-        overflow-x: auto;
-    }
-    table {
-        min-width: 600px; /* Force table to be at least this wide */
-    }
-    th, td {
-        padding: 0.75rem;
-    }
-    .btn, form button[type="submit"] {
-        width: 100%; /* Full width buttons on small screens */
-        margin-bottom: 10px;
-    }
-    .btn-small {
-        width: auto; /* Let small buttons be auto width */
-    }
-    .action-buttons-container .btn,
-    .action-buttons-container form, /* This rule might become less relevant if form is display:contents */
-    .action-buttons-container form button { /* This now targets the button directly for width */
-        width: 100%;
-        margin-bottom: 5px;
-    }
-    /* .action-buttons-container form { */ /* This specific rule for form width might be redundant */
-        /* width: 100%; */
-        /* margin-bottom: 0; */
-    /* } */
-    td form button {
-        width: 100%; /* Ensure delete button in form takes width */
-    }
-    .summary-flex-container {
-        flex-direction: column;
-        align-items: stretch; /* Make children take full width when stacked */
-    }
-    .numerical-summary,
-    .income-spending-chart-container {
-        flex-basis: auto; /* Reset flex-basis */
-        min-width: unset; /* Reset min-width */
-        margin-bottom: 1.5rem; /* Space between stacked items */
-    }
-    .income-spending-chart-container {
-        height: 220px; /* Adjust height for stacked view if needed */
-        margin-bottom: 0; /* No margin for the last item */
-    }
-    .numerical-summary h3 {
-        font-size: 1.2rem;
-    }
-    .numerical-summary h3.balance {
-        font-size: 1.3rem;
-    }
-}
-
-@media (max-width: 480px) {
-    header h1 {
-        font-size: 1.5rem;
-    }
-    .upload-section h2, .transactions-section h2, .form-section h2, .chart-section h2, .dashboard-summary h2 {
-        font-size: 1.2rem;
-    }
-    th, td {
-        font-size: 0.9rem;
-    }
-}
-
+/* Summary flex container */
 .summary-flex-container {
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    gap: 2rem;
-    align-items: flex-start; /* Align items to the top if they have different heights */
-    margin-top: 1.5rem; /* Space below month navigation */
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: stretch;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
 }
 
 .numerical-summary {
-    flex: 1; /* Takes available space, good for text */
-    min-width: 280px; /* Minimum width before wrapping */
-    text-align: left; /* Align text to the left within this block */
+    flex: 1;
+    min-width: 280px;
+    text-align: left;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+}
+
+.bar-chart-container {
+    flex: 1.5;
+    min-width: 300px;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+}
+
+.bar-chart-container h4 {
+    margin: 0 0 1rem 0;
+    color: var(--gray-700);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.bar-chart-container canvas {
+    max-width: 100%;
+    height: 200px !important;
+}
+
+.top-categories-container {
+    flex: 1;
+    min-width: 250px;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+}
+
+.top-categories-container h4 {
+    margin: 0 0 1rem 0;
+    color: var(--gray-700);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.top-spending-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: ranking;
+}
+
+.top-spending-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--gray-200);
+    position: relative;
+    counter-increment: ranking;
+}
+
+.top-spending-list li:last-child {
+    border-bottom: none;
+}
+
+.top-spending-list li::before {
+    content: counter(ranking) ".";
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-right: 0.75rem;
+    min-width: 20px;
+}
+
+.top-spending-list .category-name {
+    flex: 1;
+    color: var(--gray-700);
+    font-weight: 500;
+}
+
+.top-spending-list .category-amount {
+    font-weight: 600;
+    color: var(--error-color);
+    font-family: monospace;
 }
 
 .income-spending-chart-container {
-    flex: 1.5; /* Chart can take a bit more space */
-    min-width: 300px; /* Minimum width for the chart container */
-    height: 200px; /* Approximate height for the bar chart, adjust as needed */
-}
-
-#incomeSpendingBarChart {
-    max-height: 100%; /* Ensure chart does not overflow its container */
+    flex: 1.5;
+    min-width: 300px;
+    height: 200px;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
 }
 
 .numerical-summary h3 {
-    font-size: 1.3rem; /* Adjusted size for better fit */
+    font-size: 1.15rem;
     font-weight: 500;
-    color: var(--text-color);
+    color: var(--gray-700);
     margin-top: 0.25rem;
     margin-bottom: 0.75rem;
 }
@@ -633,6 +647,7 @@ td form {
     color: var(--error-color);
     font-weight: 600;
 }
+
 .numerical-summary h3 .currency.positive {
     color: var(--success-color);
     font-weight: 600;
@@ -641,7 +656,452 @@ td form {
 .numerical-summary h3.balance {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px dashed var(--medium-gray-color);
-    font-size: 1.4rem; /* Make balance slightly more prominent */
+    border-top: 1px solid var(--gray-200);
+    font-size: 1.3rem;
     font-weight: 600;
+}
+
+/* Chart and Top Categories Styling */
+.chart-and-summary-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: stretch;
+    margin-top: 1rem;
+}
+
+.chart-container {
+    flex: 2;
+    min-width: 300px;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius);
+    padding: 1.25rem;
+    border: 1px solid var(--gray-200);
+}
+
+.top-categories-list {
+    padding-left: 25px;
+    margin: 0;
+}
+
+.top-categories-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.95rem;
+}
+
+.top-categories-list li:last-child {
+    border-bottom: none;
+}
+
+.top-categories-list .category-name {
+    color: var(--gray-700);
+}
+
+.top-categories-list .category-amount {
+    font-weight: 600;
+}
+
+.no-data-message {
+    text-align: center;
+    color: var(--gray-500);
+    padding: 2rem 0;
+    font-style: italic;
+    font-size: 0.95rem;
+}
+
+/* Upload section */
+.upload-section form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.upload-section input[type="file"] {
+    flex: 1;
+    min-width: 200px;
+    margin-bottom: 0;
+    background-color: var(--gray-50);
+    border: 1px dashed var(--gray-300);
+    padding: 0.75rem;
+    border-radius: var(--border-radius);
+}
+
+.upload-section button[type="submit"] {
+    background-color: var(--accent-color);
+    margin-bottom: 0;
+}
+
+.upload-section button[type="submit"]:hover {
+    background-color: var(--accent-hover-color);
+}
+
+/* Currency class */
+.currency {
+    font-family: monospace;
+    font-size: 1.05em;
+}
+
+/* Two-column layout */
+.two-column-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.two-column-layout > section {
+    flex: 1;
+    min-width: 300px;
+}
+
+/* Transactions header with actions */
+.transactions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.transactions-header h2 {
+    margin: 0;
+}
+
+.btn-delete-all {
+    background-color: var(--error-color);
+    color: var(--white-color);
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.btn-delete-all:hover {
+    background-color: #B91C1C;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    header h1 {
+        margin-bottom: 0.5rem;
+    }
+
+    header nav {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    main {
+        padding: 1rem;
+        width: 95%;
+    }
+
+    .upload-section,
+    .transactions-section,
+    .form-section,
+    .chart-section,
+    .dashboard-summary {
+        padding: 1.25rem;
+    }
+
+    .month-navigation {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .summary-flex-container,
+    .chart-and-summary-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .numerical-summary,
+    .bar-chart-container,
+    .top-categories-container,
+    .income-spending-chart-container,
+    .chart-container {
+        flex-basis: 100%;
+        min-width: unset;
+    }
+
+    .bar-chart-container canvas {
+        height: 180px !important;
+    }
+
+    .chart-wrapper {
+        max-width: 400px;
+    }
+
+    .chart-wrapper canvas {
+        height: 300px !important;
+    }
+
+    .category-totals {
+        grid-template-columns: 1fr;
+    }
+
+    table {
+        min-width: 600px;
+    }
+
+    .upload-section form {
+        flex-direction: column;
+    }
+
+    .upload-section input[type="file"] {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .upload-section h2,
+    .transactions-section h2,
+    .form-section h2,
+    .chart-section h2,
+    .dashboard-summary h2 {
+        font-size: 1.2rem;
+    }
+
+    th, td {
+        font-size: 0.9rem;
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+/* Reset button styles that might be interfering */
+button {
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* Additional trash icon styling to ensure visibility */
+.trash-icon {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer;
+    color: var(--error-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    min-height: 20px;
+}
+
+.trash-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--error-color) !important; /* Force red color */
+    display: block; /* Ensure it's visible */
+}
+
+.trash-icon:hover svg {
+    fill: #B91C1C !important; /* Darker red on hover */
+}
+
+/* Make sure the form doesn't have unexpected styling */
+.delete-form {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline !important;
+    background: none !important;
+}
+
+/* Action Button Styles */
+.btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    background: none !important;
+    border: none !important;
+    padding: 0.5rem !important;
+    cursor: pointer;
+    transition: color 0.2s;
+    font-size: 1rem;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    display: inline-block !important;
+    min-width: auto !important;
+    min-height: auto !important;
+}
+
+.action-btn:hover {
+    opacity: 0.8;
+    background: none !important;
+    transform: none !important;
+}
+
+.edit-icon {
+    color: var(--info-color);
+}
+
+.delete-icon {
+    color: var(--error-color);
+}
+
+/* Ensure form submit buttons with action-btn class override general button styles */
+form button.action-btn[type="submit"] {
+    background: none !important;
+    color: inherit !important;
+    padding: 0.5rem !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-weight: normal !important;
+}
+
+form button.action-btn[type="submit"]:hover {
+    background: none !important;
+    transform: none !important;
+}
+
+/* Tooltip styles */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    background-color: var(--gray-800);
+    color: var(--white-color);
+    text-align: center;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+
+    /* Fade in */
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Chart Styles */
+.charts-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin-top: 2rem;
+}
+
+.chart-wrapper {
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+}
+
+.chart-wrapper h4 {
+    margin: 0 0 1.5rem 0;
+    color: var(--gray-700);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.chart-wrapper canvas {
+    max-width: 100%;
+    height: 400px !important;
+    border-radius: var(--border-radius);
+}
+
+/* Responsive charts */
+@media (max-width: 768px) {
+    .chart-wrapper {
+        max-width: 400px;
+    }
+
+    .chart-wrapper canvas {
+        height: 300px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-wrapper {
+        max-width: 320px;
+    }
+
+    .chart-wrapper canvas {
+        height: 250px !important;
+    }
+}
+
+/* Category Summary Styles */
+.category-summary {
+    background-color: var(--white-color);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.category-summary h2 {
+    margin-top: 0;
+    color: var(--gray-800);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+}
+
+.category-totals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 0.75rem;
+}
+
+.category-total-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+    transition: all var(--transition-speed);
+}
+
+.category-total-item:hover {
+    background-color: var(--gray-100);
+    border-color: var(--gray-300);
+}
+
+.category-name {
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.category-amount {
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.category-amount.positive {
+    color: var(--success-color);
+}
+
+.category-amount.negative {
+    color: var(--error-color);
 }
