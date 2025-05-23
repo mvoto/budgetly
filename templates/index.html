@@ -35,7 +35,61 @@
         {% endwith %}
 
         <section class="dashboard-summary">
-            <h2>{{ current_month }} {{ current_year }}</h2>
+            <!-- Month Navigation -->
+            <div class="month-navigation">
+                <a href="{{ url_for('home', year=prev_year, month=prev_month) }}" class="nav-btn prev-month">
+                    <i class="fas fa-chevron-left"></i>
+                    Previous Month
+                </a>
+
+                <div class="month-selector-container">
+                    <h2 class="current-month-header">
+                        {{ current_month }} {{ current_year }}
+                        {% if is_current_month %}
+                            <span class="current-indicator">Current</span>
+                        {% endif %}
+                    </h2>
+
+                    <!-- Quick month selector -->
+                    <div class="quick-month-selector">
+                        <select id="monthSelector" onchange="navigateToMonth()">
+                            <option value="">Jump to month...</option>
+                            {% for i in range(1, 13) %}
+                                <option value="{{ current_year }}/{{ i }}"
+                                    {% if i == current_month_num %}selected{% endif %}>
+                                    {{ month_names[i] }} {{ current_year }}
+                                </option>
+                            {% endfor %}
+                            {% if current_year > 2020 %}
+                                {% for year in range(current_year - 1, 2019, -1) %}
+                                    <optgroup label="{{ year }}">
+                                        {% for i in range(12, 0, -1) %}
+                                            <option value="{{ year }}/{{ i }}">
+                                                {{ month_names[i] }} {{ year }}
+                                            </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('home', year=next_year, month=next_month) }}" class="nav-btn next-month">
+                    Next Month
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+
+            <!-- Quick navigation to current month if not already there -->
+            {% if not is_current_month %}
+                <div class="current-month-shortcut">
+                    <a href="{{ url_for('home') }}" class="btn btn-current-month">
+                        <i class="fas fa-calendar-day"></i>
+                        Go to Current Month
+                    </a>
+                </div>
+            {% endif %}
 
             <div class="summary-flex-container">
                 <div class="numerical-summary">
@@ -100,7 +154,7 @@
                     <thead>
                         <tr>
                             <th>
-                                <a href="?sort_by=date&sort_order={{ 'asc' if current_sort_by == 'date' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
+                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=date&sort_order={{ 'asc' if current_sort_by == 'date' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
                                     Date
                                     {% if current_sort_by == 'date' %}
                                         <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
@@ -110,7 +164,7 @@
                                 </a>
                             </th>
                             <th>
-                                <a href="?sort_by=description&sort_order={{ 'asc' if current_sort_by == 'description' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
+                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=description&sort_order={{ 'asc' if current_sort_by == 'description' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
                                     Description
                                     {% if current_sort_by == 'description' %}
                                         <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
@@ -120,7 +174,7 @@
                                 </a>
                             </th>
                             <th>
-                                <a href="?sort_by=amount&sort_order={{ 'asc' if current_sort_by == 'amount' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
+                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=amount&sort_order={{ 'asc' if current_sort_by == 'amount' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
                                     Amount
                                     {% if current_sort_by == 'amount' %}
                                         <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
@@ -130,7 +184,7 @@
                                 </a>
                             </th>
                             <th>
-                                <a href="?sort_by=account_source&sort_order={{ 'asc' if current_sort_by == 'account_source' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
+                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=account_source&sort_order={{ 'asc' if current_sort_by == 'account_source' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
                                     Account
                                     {% if current_sort_by == 'account_source' %}
                                         <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
@@ -140,7 +194,7 @@
                                 </a>
                             </th>
                             <th>
-                                <a href="?sort_by=category&sort_order={{ 'asc' if current_sort_by == 'category' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
+                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=category&sort_order={{ 'asc' if current_sort_by == 'category' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
                                     Category
                                     {% if current_sort_by == 'category' %}
                                         <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>

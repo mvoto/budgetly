@@ -42,7 +42,8 @@ def create_app():
 
     # --- Routes ---
     @app.route('/')
-    def home():
+    @app.route('/<int:year>/<int:month>')
+    def home(year=None, month=None):
         # Get sorting parameters from URL
         sort_by = request.args.get('sort_by', 'date')  # Default sort by date
         sort_order = request.args.get('sort_order', 'desc')  # Default descending order
@@ -56,10 +57,23 @@ def create_app():
         if sort_order not in ['asc', 'desc']:
             sort_order = 'desc'
 
-        # Get current month's transactions
+        # Use provided year/month or default to current month
         today = date.today()
-        start_date = date(today.year, today.month, 1)
-        end_date = date(today.year, today.month + 1, 1) if today.month < 12 else date(today.year + 1, 1, 1)
+        if year is None or month is None:
+            year = today.year
+            month = today.month
+
+        # Validate month and year
+        if month < 1 or month > 12:
+            month = today.month
+            year = today.year
+
+        # Calculate start and end dates for the specified month
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
 
         # Build the query with sorting
         query = Transaction.query.filter(
@@ -134,19 +148,41 @@ def create_app():
             reverse=True
         )[:5]
 
+        # Calculate navigation dates (previous and next month)
+        if month == 1:
+            prev_month = 12
+            prev_year = year - 1
+        else:
+            prev_month = month - 1
+            prev_year = year
+
+        if month == 12:
+            next_month = 1
+            next_year = year + 1
+        else:
+            next_month = month + 1
+            next_year = year
+
         return render_template('index.html',
                             transactions=transactions,
                             category_totals=dict(category_totals),
                             total_income=total_income,
                             total_expenses=abs(total_expenses),
                             net_amount=net_amount,
-                            current_month=calendar.month_name[today.month],
-                            current_year=today.year,
+                            current_month=calendar.month_name[month],
+                            current_year=year,
+                            current_month_num=month,
                             current_sort_by=sort_by,
                             current_sort_order=sort_order,
                             expense_chart_data=json.dumps(expense_chart_data),
                             bar_chart_data=json.dumps(bar_chart_data),
-                            top_spending_categories=top_spending_categories)
+                            top_spending_categories=top_spending_categories,
+                            prev_month=prev_month,
+                            prev_year=prev_year,
+                            next_month=next_month,
+                            next_year=next_year,
+                            is_current_month=(year == today.year and month == today.month),
+                            month_names=calendar.month_name)
 
     @app.route('/upload', methods=['POST'])
     def upload_file():
@@ -487,6 +523,36 @@ def create_app():
             db.session.rollback()
             app.logger.error(f"Error deleting rule ID {rule_id}: {e}")
             return jsonify({"error": "Failed to delete rule"}), 500
+
+    @app.route('/api/available-months')
+    def get_available_months():
+        """Get all months that have transaction data"""
+        from sqlalchemy import func, distinct
+
+        # Get distinct year-month combinations from transactions
+        months_data = db.session.query(
+            extract('year', Transaction.date).label('year'),
+            extract('month', Transaction.date).label('month'),
+            func.count(Transaction.id).label('transaction_count')
+        ).group_by(
+            extract('year', Transaction.date),
+            extract('month', Transaction.date)
+        ).order_by(
+            extract('year', Transaction.date).desc(),
+            extract('month', Transaction.date).desc()
+        ).all()
+
+        available_months = []
+        for year, month, count in months_data:
+            available_months.append({
+                'year': int(year),
+                'month': int(month),
+                'month_name': calendar.month_name[int(month)],
+                'transaction_count': count,
+                'url': url_for('home', year=int(year), month=int(month))
+            })
+
+        return jsonify(available_months)
 
     # --- CLI commands for DB management ---
     @app.cli.command("init-db")
