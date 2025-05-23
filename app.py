@@ -184,18 +184,118 @@ def create_app():
                             is_current_month=(year == today.year and month == today.month),
                             month_names=calendar.month_name)
 
+    @app.route('/transactions')
+    @app.route('/transactions/<int:year>/<int:month>')
+    def transactions(year=None, month=None):
+        # Get sorting parameters from URL
+        sort_by = request.args.get('sort_by', 'date')  # Default sort by date
+        sort_order = request.args.get('sort_order', 'desc')  # Default descending order
+
+        # Validate sort_by parameter to prevent SQLAlchemy errors
+        valid_columns = ['date', 'description', 'amount', 'account_source', 'category']
+        if sort_by not in valid_columns:
+            sort_by = 'date'
+
+        # Validate sort_order parameter
+        if sort_order not in ['asc', 'desc']:
+            sort_order = 'desc'
+
+        # Use provided year/month or default to current month
+        today = date.today()
+        if year is None or month is None:
+            year = today.year
+            month = today.month
+
+        # Validate month and year
+        if month < 1 or month > 12:
+            month = today.month
+            year = today.year
+
+        # Calculate start and end dates for the specified month
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
+
+        # Build the query with sorting
+        query = Transaction.query.filter(
+            Transaction.date >= start_date,
+            Transaction.date < end_date
+        )
+
+        # Apply sorting based on column
+        if sort_by == 'date':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.date.asc())
+            else:
+                query = query.order_by(Transaction.date.desc())
+        elif sort_by == 'description':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.description.asc())
+            else:
+                query = query.order_by(Transaction.description.desc())
+        elif sort_by == 'amount':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.amount.asc())
+            else:
+                query = query.order_by(Transaction.amount.desc())
+        elif sort_by == 'account_source':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.account_source.asc())
+            else:
+                query = query.order_by(Transaction.account_source.desc())
+        elif sort_by == 'category':
+            # For category sorting, we need to join with Category table
+            from sqlalchemy import func
+            if sort_order == 'asc':
+                query = query.outerjoin(Category).order_by(func.coalesce(Category.name, 'Uncategorized').asc())
+            else:
+                query = query.outerjoin(Category).order_by(func.coalesce(Category.name, 'Uncategorized').desc())
+
+        transactions = query.all()
+
+        # Calculate navigation dates (previous and next month)
+        if month == 1:
+            prev_month = 12
+            prev_year = year - 1
+        else:
+            prev_month = month - 1
+            prev_year = year
+
+        if month == 12:
+            next_month = 1
+            next_year = year + 1
+        else:
+            next_month = month + 1
+            next_year = year
+
+        return render_template('transactions.html',
+                            transactions=transactions,
+                            current_month=calendar.month_name[month],
+                            current_year=year,
+                            current_month_num=month,
+                            current_sort_by=sort_by,
+                            current_sort_order=sort_order,
+                            prev_month=prev_month,
+                            prev_year=prev_year,
+                            next_month=next_month,
+                            next_year=next_year,
+                            is_current_month=(year == today.year and month == today.month),
+                            month_names=calendar.month_name)
+
     @app.route('/upload', methods=['POST'])
     def upload_file():
         if 'file' not in request.files:
             app.logger.warning("No file part in request")
             flash('No file part', 'error')
-            return redirect(url_for('home'))
+            return redirect(url_for('transactions'))
 
         file = request.files['file']
         if file.filename == '':
             app.logger.warning("No selected file")
             flash('No selected file', 'error')
-            return redirect(url_for('home'))
+            return redirect(url_for('transactions'))
 
         if file:
             try:
@@ -212,7 +312,7 @@ def create_app():
                 if not os.path.exists(filepath):
                     app.logger.error(f"File was not saved successfully: {filepath}")
                     flash('Error saving file', 'error')
-                    return redirect(url_for('home'))
+                    return redirect(url_for('transactions'))
 
                 app.logger.info(f"File saved successfully, size: {os.path.getsize(filepath)} bytes")
 
@@ -270,7 +370,7 @@ def create_app():
                     except Exception as e:
                         app.logger.error(f"Error cleaning up file {filepath}: {e}")
 
-        return redirect(url_for('home'))
+        return redirect(url_for('transactions'))
 
     @app.route('/add-transaction', methods=['GET', 'POST'])
     def add_transaction():
@@ -313,7 +413,7 @@ def create_app():
                 db.session.commit()
 
                 flash('Transaction added successfully!', 'success')
-                return redirect(url_for('home'))
+                return redirect(url_for('transactions'))
             except Exception as e:
                 db.session.rollback()
                 flash(f'Error adding transaction: {str(e)}', 'error')
@@ -340,7 +440,7 @@ def create_app():
 
                 db.session.commit()
                 flash('Transaction updated successfully!', 'success')
-                return redirect(url_for('home'))
+                return redirect(url_for('transactions'))
             except Exception as e:
                 db.session.rollback()
                 flash(f'Error updating transaction: {str(e)}', 'error')
@@ -362,7 +462,7 @@ def create_app():
             db.session.rollback()
             flash(f'Error deleting transaction: {str(e)}', 'error')
             app.logger.error(f'Error deleting transaction: {e}')
-        return redirect(url_for('home'))
+        return redirect(url_for('transactions'))
 
     @app.route('/delete-all-transactions', methods=['POST'])
     def delete_all_transactions():
@@ -370,7 +470,7 @@ def create_app():
             transaction_count = Transaction.query.count()
             if transaction_count == 0:
                 flash('No transactions to delete.', 'info')
-                return redirect(url_for('home'))
+                return redirect(url_for('transactions'))
 
             Transaction.query.delete()
             db.session.commit()
@@ -380,7 +480,7 @@ def create_app():
             db.session.rollback()
             flash(f'Error deleting all transactions: {str(e)}', 'error')
             app.logger.error(f'Error deleting all transactions: {e}')
-        return redirect(url_for('home'))
+        return redirect(url_for('transactions'))
 
     # Keep existing category management routes
     @app.route('/manage-categories')

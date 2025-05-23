@@ -16,7 +16,7 @@
         <h1>Budgetly</h1>
         <nav>
             <a href="{{ url_for('home') }}" class="active">Dashboard</a>
-            <a href="{{ url_for('add_transaction') }}">Add Transaction</a>
+            <a href="{{ url_for('transactions') }}">Transactions</a>
             <a href="{{ url_for('serve_category_manager_html') }}">Manage Categories</a>
         </nav>
     </header>
@@ -128,117 +128,8 @@
             </div>
         </section>
 
-        <div class="upload-section">
-            <h2>Upload Transactions</h2>
-            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="upload-form">
-                <div class="form-group">
-                    <label for="file">Select CSV file:</label>
-                    <input type="file" id="file" name="file" accept=".csv" required>
-                    <small class="help-text">Supported formats: TD Bank and American Express CSV exports</small>
-                </div>
-                <button type="submit" class="btn btn-primary">Upload</button>
-            </form>
-        </div>
-
-        <section class="transactions-section">
-            <div class="transactions-header">
-                <h2>Recent Transactions</h2>
-                {% if transactions %}
-                <form method="POST" action="{{ url_for('delete_all_transactions') }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete ALL transactions? This action cannot be undone!');">
-                    <button type="submit" class="btn btn-delete-all">Delete All</button>
-                </form>
-                {% endif %}
-            </div>
-            {% if transactions %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>
-                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=date&sort_order={{ 'asc' if current_sort_by == 'date' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
-                                    Date
-                                    {% if current_sort_by == 'date' %}
-                                        <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
-                            <th>
-                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=description&sort_order={{ 'asc' if current_sort_by == 'description' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
-                                    Description
-                                    {% if current_sort_by == 'description' %}
-                                        <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
-                            <th>
-                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=amount&sort_order={{ 'asc' if current_sort_by == 'amount' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
-                                    Amount
-                                    {% if current_sort_by == 'amount' %}
-                                        <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
-                            <th>
-                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=account_source&sort_order={{ 'asc' if current_sort_by == 'account_source' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
-                                    Account
-                                    {% if current_sort_by == 'account_source' %}
-                                        <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
-                            <th>
-                                <a href="{{ url_for('home', year=current_year, month=current_month_num) }}?sort_by=category&sort_order={{ 'asc' if current_sort_by == 'category' and current_sort_order == 'desc' else 'desc' }}" class="sort-header">
-                                    Category
-                                    {% if current_sort_by == 'category' %}
-                                        <i class="fas fa-sort-{{ 'up' if current_sort_order == 'asc' else 'down' }}"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for t in transactions %}
-                        <tr>
-                            <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
-                            <td>{{ t.description }}</td>
-                            <td class="{% if t.amount < 0 %}negative{% else %}positive{% endif %}">${{ "%.2f"|format(t.amount) }}</td>
-                            <td>{{ t.account_source }}</td>
-                            <td>{{ t.category.name if t.category else 'Uncategorized' }}</td>
-                            <td>
-                                <div class="btn-group">
-                                    <a href="{{ url_for('edit_transaction', transaction_id=t.id) }}" class="action-btn tooltip">
-                                        <i class="fas fa-edit edit-icon"></i>
-                                        <span class="tooltiptext">Edit Transaction</span>
-                                    </a>
-                                    <form method="POST" action="{{ url_for('delete_transaction', transaction_id=t.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this transaction?');">
-                                        <button type="submit" class="action-btn tooltip">
-                                            <i class="fas fa-trash-alt delete-icon"></i>
-                                            <span class="tooltiptext">Delete Transaction</span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>No transactions found. Upload a file or add transactions manually.</p>
-            {% endif %}
-        </section>
-
         <section class="category-summary">
-            <h2>Category Totals</h2>
+            <h2>Category Totals for {{ current_month }} {{ current_year }}</h2>
             {% if category_totals %}
                 <div class="category-totals">
                     {% for category, amount in category_totals.items() %}
@@ -249,15 +140,37 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p>No category data available.</p>
+                <p>No category data available for this month.</p>
             {% endif %}
         </section>
+
+        <div class="dashboard-actions">
+            <h3>Quick Actions</h3>
+            <div class="action-buttons">
+                <a href="{{ url_for('transactions') }}" class="btn btn-primary">
+                    <i class="fas fa-list"></i>
+                    Manage Transactions
+                </a>
+                <a href="{{ url_for('serve_category_manager_html') }}" class="btn btn-secondary">
+                    <i class="fas fa-tags"></i>
+                    Manage Categories
+                </a>
+            </div>
+        </div>
     </main>
     <footer>
         <p>&copy; 2025 Budgetly</p>
     </footer>
 
     <script>
+        // Month navigation function
+        function navigateToMonth() {
+            const selector = document.getElementById('monthSelector');
+            if (selector.value) {
+                window.location.href = '/' + selector.value;
+            }
+        }
+
         // Chart.js configuration and rendering
         document.addEventListener('DOMContentLoaded', function() {
             // Parse chart data from backend

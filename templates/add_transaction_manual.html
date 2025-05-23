@@ -14,7 +14,7 @@
         <h1>Budgetly</h1>
         <nav>
             <a href="{{ url_for('home') }}">Dashboard</a>
-            <a href="{{ url_for('add_transaction') }}" class="active">Add Transaction</a>
+            <a href="{{ url_for('transactions') }}" class="active">Transactions</a>
             <a href="{{ url_for('serve_category_manager_html') }}">Manage Categories</a>
         </nav>
     </header>
@@ -70,7 +70,7 @@
 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Add Transaction</button>
-                    <a href="{{ url_for('home') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ url_for('transactions') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </section>
