@@ -12,7 +12,7 @@ from flask_migrate import Migrate # For database migrations
 import logging # For better logging
 
 from extensions import db
-from models import Category, Rule, Transaction
+from models import Category, Rule, Transaction, Budget
 from categorizer import assign_category, get_defined_categories
 from parser import process_uploaded_file # Re-adding parser for file uploads
 
@@ -163,6 +163,42 @@ def create_app():
             next_month = month + 1
             next_year = year
 
+        # Get budget data for the current month
+        budgets = Budget.query.filter_by(month=month, year=year).all()
+        budget_data = {}
+        total_budgeted = 0
+        total_spent = 0
+
+        # Create a mapping of budget data
+        for budget in budgets:
+            if budget.category:
+                category_name = budget.category.name
+                # Get actual spending for this category (only expenses, so negative amounts)
+                actual_spent = abs(category_totals.get(category_name, 0)) if category_totals.get(category_name, 0) < 0 else 0
+
+                budget_data[category_name] = {
+                    'budgeted': budget.budgeted_amount,
+                    'spent': actual_spent,
+                    'remaining': budget.budgeted_amount - actual_spent,
+                    'percentage': (actual_spent / budget.budgeted_amount * 100) if budget.budgeted_amount > 0 else 0,
+                    'over_budget': actual_spent > budget.budgeted_amount
+                }
+
+                total_budgeted += budget.budgeted_amount
+                total_spent += actual_spent
+
+        # Calculate overall budget performance
+        budget_summary = {
+            'total_budgeted': total_budgeted,
+            'total_spent': total_spent,
+            'total_remaining': total_budgeted - total_spent,
+            'overall_percentage': (total_spent / total_budgeted * 100) if total_budgeted > 0 else 0,
+            'over_budget': total_spent > total_budgeted
+        }
+
+        # Get all categories for budget setup
+        all_categories = [category.to_dict() for category in Category.query.order_by(Category.name).all()]
+
         return render_template('index.html',
                             transactions=transactions,
                             category_totals=dict(category_totals),
@@ -182,6 +218,109 @@ def create_app():
                             next_month=next_month,
                             next_year=next_year,
                             is_current_month=(year == today.year and month == today.month),
+                            month_names=calendar.month_name,
+                            budget_data=budget_data,
+                            budget_summary=budget_summary,
+                            all_categories=all_categories)
+
+    @app.route('/transactions')
+    @app.route('/transactions/<int:year>/<int:month>')
+    def transactions(year=None, month=None):
+        # Get sorting parameters from URL
+        sort_by = request.args.get('sort_by', 'date')  # Default sort by date
+        sort_order = request.args.get('sort_order', 'desc')  # Default descending order
+
+        # Validate sort_by parameter to prevent SQLAlchemy errors
+        valid_columns = ['date', 'description', 'amount', 'account_source', 'category']
+        if sort_by not in valid_columns:
+            sort_by = 'date'
+
+        # Validate sort_order parameter
+        if sort_order not in ['asc', 'desc']:
+            sort_order = 'desc'
+
+        # Use provided year/month or default to current month
+        today = date.today()
+        if year is None or month is None:
+            year = today.year
+            month = today.month
+
+        # Validate month and year
+        if month < 1 or month > 12:
+            month = today.month
+            year = today.year
+
+        # Calculate start and end dates for the specified month
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
+
+        # Build the query with sorting
+        query = Transaction.query.filter(
+            Transaction.date >= start_date,
+            Transaction.date < end_date
+        )
+
+        # Apply sorting based on column
+        if sort_by == 'date':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.date.asc())
+            else:
+                query = query.order_by(Transaction.date.desc())
+        elif sort_by == 'description':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.description.asc())
+            else:
+                query = query.order_by(Transaction.description.desc())
+        elif sort_by == 'amount':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.amount.asc())
+            else:
+                query = query.order_by(Transaction.amount.desc())
+        elif sort_by == 'account_source':
+            if sort_order == 'asc':
+                query = query.order_by(Transaction.account_source.asc())
+            else:
+                query = query.order_by(Transaction.account_source.desc())
+        elif sort_by == 'category':
+            # For category sorting, we need to join with Category table
+            from sqlalchemy import func
+            if sort_order == 'asc':
+                query = query.outerjoin(Category).order_by(func.coalesce(Category.name, 'Uncategorized').asc())
+            else:
+                query = query.outerjoin(Category).order_by(func.coalesce(Category.name, 'Uncategorized').desc())
+
+        transactions = query.all()
+
+        # Calculate navigation dates (previous and next month)
+        if month == 1:
+            prev_month = 12
+            prev_year = year - 1
+        else:
+            prev_month = month - 1
+            prev_year = year
+
+        if month == 12:
+            next_month = 1
+            next_year = year + 1
+        else:
+            next_month = month + 1
+            next_year = year
+
+        return render_template('transactions.html',
+                            transactions=transactions,
+                            current_month=calendar.month_name[month],
+                            current_year=year,
+                            current_month_num=month,
+                            current_sort_by=sort_by,
+                            current_sort_order=sort_order,
+                            prev_month=prev_month,
+                            prev_year=prev_year,
+                            next_month=next_month,
+                            next_year=next_year,
+                            is_current_month=(year == today.year and month == today.month),
                             month_names=calendar.month_name)
 
     @app.route('/upload', methods=['POST'])
@@ -189,13 +328,13 @@ def create_app():
         if 'file' not in request.files:
             app.logger.warning("No file part in request")
             flash('No file part', 'error')
-            return redirect(url_for('home'))
+            return redirect(url_for('transactions'))
 
         file = request.files['file']
         if file.filename == '':
             app.logger.warning("No selected file")
             flash('No selected file', 'error')
-            return redirect(url_for('home'))
+            return redirect(url_for('transactions'))
 
         if file:
             try:
@@ -212,7 +351,7 @@ def create_app():
                 if not os.path.exists(filepath):
                     app.logger.error(f"File was not saved successfully: {filepath}")
                     flash('Error saving file', 'error')
-                    return redirect(url_for('home'))
+                    return redirect(url_for('transactions'))
 
                 app.logger.info(f"File saved successfully, size: {os.path.getsize(filepath)} bytes")
 
@@ -270,7 +409,7 @@ def create_app():
                     except Exception as e:
                         app.logger.error(f"Error cleaning up file {filepath}: {e}")
 
-        return redirect(url_for('home'))
+        return redirect(url_for('transactions'))
 
     @app.route('/add-transaction', methods=['GET', 'POST'])
     def add_transaction():
@@ -313,7 +452,7 @@ def create_app():
                 db.session.commit()
 
                 flash('Transaction added successfully!', 'success')
-                return redirect(url_for('home'))
+                return redirect(url_for('transactions'))
             except Exception as e:
                 db.session.rollback()
                 flash(f'Error adding transaction: {str(e)}', 'error')
@@ -340,7 +479,7 @@ def create_app():
 
                 db.session.commit()
                 flash('Transaction updated successfully!', 'success')
-                return redirect(url_for('home'))
+                return redirect(url_for('transactions'))
             except Exception as e:
                 db.session.rollback()
                 flash(f'Error updating transaction: {str(e)}', 'error')
@@ -362,7 +501,7 @@ def create_app():
             db.session.rollback()
             flash(f'Error deleting transaction: {str(e)}', 'error')
             app.logger.error(f'Error deleting transaction: {e}')
-        return redirect(url_for('home'))
+        return redirect(url_for('transactions'))
 
     @app.route('/delete-all-transactions', methods=['POST'])
     def delete_all_transactions():
@@ -370,7 +509,7 @@ def create_app():
             transaction_count = Transaction.query.count()
             if transaction_count == 0:
                 flash('No transactions to delete.', 'info')
-                return redirect(url_for('home'))
+                return redirect(url_for('transactions'))
 
             Transaction.query.delete()
             db.session.commit()
@@ -380,7 +519,7 @@ def create_app():
             db.session.rollback()
             flash(f'Error deleting all transactions: {str(e)}', 'error')
             app.logger.error(f'Error deleting all transactions: {e}')
-        return redirect(url_for('home'))
+        return redirect(url_for('transactions'))
 
     # Keep existing category management routes
     @app.route('/manage-categories')
@@ -553,6 +692,96 @@ def create_app():
             })
 
         return jsonify(available_months)
+
+    # Budget API endpoints
+    @app.route('/api/budgets/<int:year>/<int:month>', methods=['GET'])
+    def get_budgets(year, month):
+        """Get all budgets for a specific month/year"""
+        try:
+            budgets = Budget.query.filter_by(month=month, year=year).all()
+            return jsonify([budget.to_dict() for budget in budgets])
+        except Exception as e:
+            app.logger.error(f"Error getting budgets for {year}-{month}: {e}")
+            return jsonify({"error": "Failed to retrieve budgets"}), 500
+
+    @app.route('/api/budgets', methods=['POST'])
+    def set_budget():
+        """Set or update a budget for a category/month/year"""
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'JSON data is required'}), 400
+
+        required_fields = ['category_id', 'month', 'year', 'budgeted_amount']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field} is required'}), 400
+
+        category_id = data['category_id']
+        month = data['month']
+        year = data['year']
+        budgeted_amount = float(data['budgeted_amount'])
+
+        # Validate inputs
+        if not (1 <= month <= 12):
+            return jsonify({'error': 'Month must be between 1 and 12'}), 400
+
+        if year < 2000 or year > 2100:
+            return jsonify({'error': 'Year must be between 2000 and 2100'}), 400
+
+        if budgeted_amount < 0:
+            return jsonify({'error': 'Budget amount cannot be negative'}), 400
+
+        # Check if category exists
+        category = Category.query.get(category_id)
+        if not category:
+            return jsonify({'error': 'Category not found'}), 404
+
+        try:
+            # Check if budget already exists
+            existing_budget = Budget.query.filter_by(
+                category_id=category_id,
+                month=month,
+                year=year
+            ).first()
+
+            if existing_budget:
+                # Update existing budget
+                existing_budget.budgeted_amount = budgeted_amount
+                db.session.commit()
+                app.logger.info(f"Updated budget for {category.name} {year}-{month:02d}: ${budgeted_amount}")
+                return jsonify(existing_budget.to_dict())
+            else:
+                # Create new budget
+                new_budget = Budget(
+                    category_id=category_id,
+                    month=month,
+                    year=year,
+                    budgeted_amount=budgeted_amount
+                )
+                db.session.add(new_budget)
+                db.session.commit()
+                app.logger.info(f"Created budget for {category.name} {year}-{month:02d}: ${budgeted_amount}")
+                return jsonify(new_budget.to_dict()), 201
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error setting budget: {e}")
+            return jsonify({"error": "Failed to set budget"}), 500
+
+    @app.route('/api/budgets/<int:budget_id>', methods=['DELETE'])
+    def delete_budget(budget_id):
+        """Delete a budget"""
+        budget = Budget.query.get_or_404(budget_id)
+        try:
+            category_name = budget.category.name if budget.category else 'Unknown'
+            db.session.delete(budget)
+            db.session.commit()
+            app.logger.info(f"Deleted budget: {category_name} {budget.year}-{budget.month:02d}")
+            return jsonify({'message': f'Budget for {category_name} deleted successfully'}), 200
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting budget ID {budget_id}: {e}")
+            return jsonify({"error": "Failed to delete budget"}), 500
 
     # --- CLI commands for DB management ---
     @app.cli.command("init-db")
