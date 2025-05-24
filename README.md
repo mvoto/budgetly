@@ -12,5 +12,3 @@ A personal budgeting application built with Python and Flask.
 
 # Upcoming Features
 
-- Separate transactions and charts by month
-- Ability to estipulate how much I want to spend on each category

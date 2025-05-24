@@ -7,6 +7,7 @@ class Category(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     rules = db.relationship('Rule', backref='category', lazy=True, cascade="all, delete-orphan")
     transactions = db.relationship('Transaction', backref='category', lazy=True)
+    budgets = db.relationship('Budget', backref='category', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f'<Category {self.name}>'
@@ -54,4 +55,28 @@ class Transaction(db.Model):
             'amount': self.amount,
             'account_source': self.account_source,
             'category_id': self.category_id
+        }
+
+class Budget(db.Model):
+    __tablename__ = 'budgets'
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+    month = db.Column(db.Integer, nullable=False)  # 1-12
+    year = db.Column(db.Integer, nullable=False)
+    budgeted_amount = db.Column(db.Float, nullable=False, default=0.0)
+
+    # Ensure unique budget per category per month/year
+    __table_args__ = (db.UniqueConstraint('category_id', 'month', 'year', name='_category_month_year_uc'),)
+
+    def __repr__(self):
+        return f'<Budget {self.category.name if self.category else "No Category"} {self.year}-{self.month:02d} ${self.budgeted_amount}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'category_id': self.category_id,
+            'category_name': self.category.name if self.category else 'Unknown',
+            'month': self.month,
+            'year': self.year,
+            'budgeted_amount': self.budgeted_amount
         }

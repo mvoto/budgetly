@@ -128,22 +128,6 @@
             </div>
         </section>
 
-        <section class="category-summary">
-            <h2>Category Totals for {{ current_month }} {{ current_year }}</h2>
-            {% if category_totals %}
-                <div class="category-totals">
-                    {% for category, amount in category_totals.items() %}
-                        <div class="category-total-item">
-                            <span class="category-name">{{ category }}</span>
-                            <span class="category-amount {% if amount < 0 %}negative{% else %}positive{% endif %}">${{ "%.2f"|format(amount) }}</span>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p>No category data available for this month.</p>
-            {% endif %}
-        </section>
-
         <div class="dashboard-actions">
             <h3>Quick Actions</h3>
             <div class="action-buttons">
@@ -157,6 +141,117 @@
                 </a>
             </div>
         </div>
+
+        <section class="budget-planning">
+            <h2>Budget Planning for {{ current_month }} {{ current_year }}</h2>
+
+            {% if budget_summary.total_budgeted > 0 %}
+                <div class="budget-overview">
+                    <div class="budget-summary-card">
+                        <h3>Budget Overview</h3>
+                        <div class="budget-summary-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total Budgeted:</span>
+                                <span class="stat-value budgeted">${{ "%.2f"|format(budget_summary.total_budgeted) }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Total Spent:</span>
+                                <span class="stat-value {% if budget_summary.over_budget %}over-budget{% else %}under-budget{% endif %}">
+                                    ${{ "%.2f"|format(budget_summary.total_spent) }}
+                                </span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Remaining:</span>
+                                <span class="stat-value {% if budget_summary.total_remaining < 0 %}over-budget{% else %}under-budget{% endif %}">
+                                    ${{ "%.2f"|format(budget_summary.total_remaining) }}
+                                </span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Budget Used:</span>
+                                <span class="stat-value {% if budget_summary.over_budget %}over-budget{% else %}under-budget{% endif %}">
+                                    {{ "%.1f"|format(budget_summary.overall_percentage) }}%
+                                </span>
+                            </div>
+                        </div>
+                        <div class="budget-progress-bar">
+                            <div class="progress-fill {% if budget_summary.over_budget %}over-budget{% endif %}"
+                                 style="width: {{ [budget_summary.overall_percentage, 100]|min }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="budget-categories">
+                <h3>Budget by Category</h3>
+                <p class="budget-instruction">Set your monthly budget for each category. Click on the budget amount to edit it inline.</p>
+
+                <div class="budget-list">
+                    {% for category in all_categories %}
+                        {% set current_budget = budget_data.get(category.name, {}) %}
+                        {% set budgeted_amount = current_budget.get('budgeted', 0) %}
+                        {% set spent_amount = current_budget.get('spent', 0) %}
+                        {% set remaining_amount = current_budget.get('remaining', 0) %}
+                        {% set percentage = current_budget.get('percentage', 0) %}
+                        {% set over_budget = current_budget.get('over_budget', false) %}
+
+                        <div class="budget-category-row" data-category-id="{{ category.id }}" data-category-name="{{ category.name }}">
+                            <div class="category-info">
+                                <div class="category-name">{{ category.name }}</div>
+                                <div class="category-budget">
+                                    <span class="budget-label">Budget:</span>
+                                    <div class="budget-input-wrapper">
+                                        <span class="budget-display" onclick="enableBudgetEdit(this)">
+                                            $<span class="budget-amount">{{ "%.2f"|format(budgeted_amount) }}</span>
+                                        </span>
+                                        <input type="number" class="budget-input"
+                                               value="{{ budgeted_amount }}"
+                                               min="0" step="0.01"
+                                               style="display: none;"
+                                               onblur="saveBudgetInline(this)"
+                                               onkeypress="handleBudgetKeypress(event, this)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if budgeted_amount > 0 %}
+                                <div class="category-stats">
+                                    <div class="spending-info">
+                                        <span class="spent {% if over_budget %}over-budget{% else %}under-budget{% endif %}">
+                                            Spent: ${{ "%.2f"|format(spent_amount) }}
+                                        </span>
+                                        <span class="remaining {% if remaining_amount < 0 %}over-budget{% else %}under-budget{% endif %}">
+                                            {% if remaining_amount >= 0 %}
+                                                Remaining: ${{ "%.2f"|format(remaining_amount) }}
+                                            {% else %}
+                                                Over by: ${{ "%.2f"|format(remaining_amount * -1) }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="budget-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill {% if over_budget %}over-budget{% endif %}"
+                                                 style="width: {{ [percentage, 100]|min }}%"></div>
+                                        </div>
+                                        <span class="percentage {% if over_budget %}over-budget{% else %}under-budget{% endif %}">
+                                            {{ "%.1f"|format(percentage) }}%
+                                        </span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="category-stats no-budget">
+                                    <span class="no-budget-text">Click budget amount to set</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="budget-summary-actions">
+                    <button class="btn btn-secondary" onclick="clearAllBudgets()">Clear All Budgets</button>
+                    <p id="budgetError" class="error-message" style="display: none;"></p>
+                </div>
+            </div>
+        </section>
     </main>
     <footer>
         <p>&copy; 2025 Budgetly</p>
@@ -283,6 +378,123 @@
                 expenseCtx.fillText('No expense data', expenseCanvas.width/2, expenseCanvas.height/2);
             }
         });
+
+        // Budget Management Functions
+        const currentMonth = {{ current_month_num }};
+        const currentYear = {{ current_year }};
+
+        function enableBudgetEdit(displayElement) {
+            const wrapper = displayElement.parentElement;
+            const input = wrapper.querySelector('.budget-input');
+
+            displayElement.style.display = 'none';
+            input.style.display = 'inline-block';
+            input.focus();
+            input.select();
+        }
+
+        function saveBudgetInline(inputElement) {
+            const wrapper = inputElement.parentElement;
+            const displayElement = wrapper.querySelector('.budget-display');
+            const row = inputElement.closest('.budget-category-row');
+            const categoryId = row.dataset.categoryId;
+            const amount = parseFloat(inputElement.value) || 0;
+            const errorEl = document.getElementById('budgetError');
+
+            // Clear previous errors
+            errorEl.style.display = 'none';
+
+            // Send API request
+            fetch('/api/budgets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    category_id: parseInt(categoryId),
+                    month: currentMonth,
+                    year: currentYear,
+                    budgeted_amount: amount
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(errorEl, data.error);
+                    // Revert to previous value
+                    inputElement.value = displayElement.querySelector('.budget-amount').textContent;
+                } else {
+                    // Update display and refresh page to show new stats
+                    displayElement.querySelector('.budget-amount').textContent = amount.toFixed(2);
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error setting budget:', error);
+                showError(errorEl, 'Failed to set budget. Please try again.');
+                // Revert to previous value
+                inputElement.value = displayElement.querySelector('.budget-amount').textContent;
+            })
+            .finally(() => {
+                // Always switch back to display mode
+                inputElement.style.display = 'none';
+                displayElement.style.display = 'inline-block';
+            });
+        }
+
+        function handleBudgetKeypress(event, inputElement) {
+            if (event.key === 'Enter') {
+                inputElement.blur(); // This will trigger saveBudgetInline
+            } else if (event.key === 'Escape') {
+                // Cancel editing - revert to display mode without saving
+                const wrapper = inputElement.parentElement;
+                const displayElement = wrapper.querySelector('.budget-display');
+                inputElement.value = displayElement.querySelector('.budget-amount').textContent;
+                inputElement.style.display = 'none';
+                displayElement.style.display = 'inline-block';
+            }
+        }
+
+        function clearAllBudgets() {
+            if (!confirm('Are you sure you want to clear all budgets? This action cannot be undone.')) {
+                return;
+            }
+
+            const rows = document.querySelectorAll('.budget-category-row');
+            const promises = [];
+
+            rows.forEach(row => {
+                const categoryId = row.dataset.categoryId;
+                const promise = fetch('/api/budgets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        category_id: parseInt(categoryId),
+                        month: currentMonth,
+                        year: currentYear,
+                        budgeted_amount: 0
+                    })
+                });
+                promises.push(promise);
+            });
+
+            Promise.all(promises)
+                .then(() => {
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error clearing budgets:', error);
+                    const errorEl = document.getElementById('budgetError');
+                    showError(errorEl, 'Failed to clear all budgets. Please try again.');
+                });
+        }
+
+        function showError(element, message) {
+            element.textContent = message;
+            element.style.display = 'block';
+        }
     </script>
 </body>
 </html>
