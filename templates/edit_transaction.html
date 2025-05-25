@@ -22,6 +22,7 @@
         <section class="form-section">
             <h2>Edit Transaction</h2>
             <form method="POST" action="{{ url_for('edit_transaction', transaction_id=transaction.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <label for="date">Date:</label>
                 <input type="date" id="date" name="date" value="{{ transaction.date.strftime('%Y-%m-%d') if transaction else '' }}" required>
 

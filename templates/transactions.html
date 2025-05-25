@@ -18,6 +18,13 @@
             <a href="{{ url_for('transactions') }}" class="active">Transactions</a>
             <a href="{{ url_for('serve_category_manager_html') }}">Manage Categories</a>
         </nav>
+        <div class="user-info">
+            <span>Welcome, {{ current_user.email }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </a>
+        </div>
     </header>
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -92,6 +99,7 @@
         <div class="upload-section">
             <h2>Upload Transactions</h2>
             <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="upload-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="form-group">
                     <label for="file">Select CSV file:</label>
                     <input type="file" id="file" name="file" accept=".csv" required>
@@ -115,6 +123,7 @@
                 <h2>Transactions for {{ current_month }} {{ current_year }}</h2>
                 {% if transactions %}
                 <form method="POST" action="{{ url_for('delete_all_transactions') }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete ALL transactions? This action cannot be undone!');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit" class="btn btn-delete-all">Delete All</button>
                 </form>
                 {% endif %}
@@ -191,6 +200,7 @@
                                         <span class="tooltiptext">Edit Transaction</span>
                                     </a>
                                     <form method="POST" action="{{ url_for('delete_transaction', transaction_id=t.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this transaction?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <button type="submit" class="action-btn tooltip">
                                             <i class="fas fa-trash-alt delete-icon"></i>
                                             <span class="tooltiptext">Delete Transaction</span>

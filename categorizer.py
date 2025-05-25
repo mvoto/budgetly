@@ -39,7 +39,7 @@ def get_db_session():
             print(f"Error creating database session: {e}")
             yield None
 
-def assign_category(description):
+def assign_category(description, user_id=None):
     """Assigns a category to a transaction based on its description using DB rules."""
     if not description:
         return None
@@ -52,8 +52,11 @@ def assign_category(description):
             return None
 
         try:
-            # Get all rules ordered by length (longer rules first for more specificity)
-            rules = session.query(Rule).join(Category).order_by(db.func.length(Rule.keyword_pattern).desc()).all()
+            # Get all rules for the specific user, ordered by length (longer rules first for more specificity)
+            query = session.query(Rule).join(Category)
+            if user_id:
+                query = query.filter(Category.user_id == user_id)
+            rules = query.order_by(db.func.length(Rule.keyword_pattern).desc()).all()
 
             for rule in rules:
                 try:
@@ -78,7 +81,7 @@ def assign_category(description):
 
     return None
 
-def get_defined_categories():
+def get_defined_categories(user_id=None):
     """Returns a sorted list of unique category names from the database."""
     with get_db_session() as session:
         if not session:
@@ -86,7 +89,10 @@ def get_defined_categories():
             return []
 
         try:
-            categories = session.query(Category.name).order_by(Category.name).all()
+            query = session.query(Category.name)
+            if user_id:
+                query = query.filter(Category.user_id == user_id)
+            categories = query.order_by(Category.name).all()
             return [category[0] for category in categories]
         except Exception as e:
             print(f"Error getting categories: {e}")

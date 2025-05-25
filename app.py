@@ -10,16 +10,57 @@ from sqlalchemy import extract # For filtering by month/year
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate # For database migrations
 import logging # For better logging
+from flask_login import login_required, current_user
 
-from extensions import db
-from models import Category, Rule, Transaction, Budget
+from extensions import db, login_manager, csrf
+from models import Category, Rule, Transaction, Budget, User
 from categorizer import assign_category, get_defined_categories
 from parser import process_uploaded_file # Re-adding parser for file uploads
+from auth import auth
 
 load_dotenv() # Load environment variables from .env
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+def create_default_categories_for_user(user_id):
+    """Helper function to create default categories for a new user."""
+    from models import Category, Rule
+    from extensions import db
+
+    default_categories_rules = {
+        "Groceries": ["superstore", "save on foods", "wal-mart groceries"],
+        "Dining Out/Cafe": ["mcdonald's", "tim hortons", "starbucks", "subway", "pizza"],
+        "Food Delivery": ["uber eats", "doordash", "skipTheDishes"],
+        "Bills/Utilities": ["fido mobile", "fortisbc energy", "hydro"],
+        "Subscriptions/Entertainment": ["netflix.com", "spotify", "disney plus"],
+        "Subscriptions/Services": ["apple.com/bill", "google cloud"],
+        "Shopping/Online": ["amazon.ca", "temu.com", "ebay"],
+        "Shopping/General Merchandise": ["wal-mart", "dollarama", "winners"],
+        "Healthcare": ["pharmacy", "clinic", "dental"],
+        "Insurance": ["icbc", "square one insurance", "life insurance"],
+        "Car": ["gas station", "esso", "shell", "petro-canada", "mechanic", "car wash"],
+        "Investments": ["questrade", "wealthsimple"],
+        "Transfers": ["e-transfer", "send money"],
+        "Credit Card Payment": ["payment - thank you", "cibc visa payment", "td mc payment"],
+        "Housing": ["rent", "mortgage", "strata fee"],
+        "Childcare/Education": ["daycare", "school fees"],
+        "Travel": ["expedia", "booking.com", "airbnb", "flights"],
+        "Miscellaneous": ["misc", "other"]
+    }
+
+    for cat_name, rules_list in default_categories_rules.items():
+        category = Category(name=cat_name, user_id=user_id)
+        db.session.add(category)
+        db.session.flush()
+        for rule_kw in rules_list:
+            rule = Rule(keyword_pattern=rule_kw, category_id=category.id)
+            db.session.add(rule)
+    db.session.commit()
 
 def create_app():
     app = Flask(__name__, template_folder='templates')
@@ -38,11 +79,17 @@ def create_app():
 
     # --- Initialize Extensions ---
     db.init_app(app)
+    login_manager.init_app(app)
+    csrf.init_app(app)
     Migrate(app, db)
+
+    # Register blueprints
+    app.register_blueprint(auth)
 
     # --- Routes ---
     @app.route('/')
     @app.route('/<int:year>/<int:month>')
+    @login_required
     def home(year=None, month=None):
         # Get sorting parameters from URL
         sort_by = request.args.get('sort_by', 'date')  # Default sort by date
@@ -78,7 +125,8 @@ def create_app():
         # Build the query with sorting
         query = Transaction.query.filter(
             Transaction.date >= start_date,
-            Transaction.date < end_date
+            Transaction.date < end_date,
+            Transaction.user_id == current_user.id
         )
 
         # Apply sorting based on column
@@ -164,7 +212,7 @@ def create_app():
             next_year = year
 
         # Get budget data for the current month
-        budgets = Budget.query.filter_by(month=month, year=year).all()
+        budgets = Budget.query.filter_by(month=month, year=year, user_id=current_user.id).all()
         budget_data = {}
         total_budgeted = 0
         total_spent = 0
@@ -197,7 +245,7 @@ def create_app():
         }
 
         # Get all categories for budget setup
-        all_categories = [category.to_dict() for category in Category.query.order_by(Category.name).all()]
+        all_categories = [category.to_dict() for category in Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()]
 
         return render_template('index.html',
                             transactions=transactions,
@@ -225,6 +273,7 @@ def create_app():
 
     @app.route('/transactions')
     @app.route('/transactions/<int:year>/<int:month>')
+    @login_required
     def transactions(year=None, month=None):
         # Get sorting parameters from URL
         sort_by = request.args.get('sort_by', 'date')  # Default sort by date
@@ -260,7 +309,8 @@ def create_app():
         # Build the query with sorting
         query = Transaction.query.filter(
             Transaction.date >= start_date,
-            Transaction.date < end_date
+            Transaction.date < end_date,
+            Transaction.user_id == current_user.id
         )
 
         # Apply sorting based on column
@@ -324,6 +374,7 @@ def create_app():
                             month_names=calendar.month_name)
 
     @app.route('/upload', methods=['POST'])
+    @login_required
     def upload_file():
         if 'file' not in request.files:
             app.logger.warning("No file part in request")
@@ -357,7 +408,7 @@ def create_app():
 
                 try:
                     app.logger.info(f"Processing file: {filename}")
-                    transactions = process_uploaded_file(filepath, filename)
+                    transactions = process_uploaded_file(filepath, filename, current_user.id)
                     app.logger.info(f"Found {len(transactions)} transactions to add")
 
                     if transactions:
@@ -365,11 +416,15 @@ def create_app():
                         duplicate_count = 0
 
                         for transaction in transactions:
-                            # Check for duplicate transactions with same description, amount, and date
+                            # Set the user_id for the transaction
+                            transaction.user_id = current_user.id
+
+                            # Check for duplicate transactions with same description, amount, and date for this user
                             existing_transaction = Transaction.query.filter_by(
                                 description=transaction.description,
                                 amount=transaction.amount,
-                                date=transaction.date
+                                date=transaction.date,
+                                user_id=current_user.id
                             ).first()
 
                             if existing_transaction:
@@ -412,6 +467,7 @@ def create_app():
         return redirect(url_for('transactions'))
 
     @app.route('/add-transaction', methods=['GET', 'POST'])
+    @login_required
     def add_transaction():
         if request.method == 'POST':
             try:
@@ -422,22 +478,29 @@ def create_app():
                 account_source = request.form['account_source']
                 category_id = request.form.get('category_id')  # This will be None if no category selected
 
-                # Check for duplicate transactions with same description, amount, and date
+                # Check for duplicate transactions with same description, amount, and date for this user
                 existing_transaction = Transaction.query.filter_by(
                     description=description,
                     amount=amount,
-                    date=transaction_date
+                    date=transaction_date,
+                    user_id=current_user.id
                 ).first()
 
                 if existing_transaction:
                     flash('A transaction with the same description, amount, and date already exists.', 'warning')
                     app.logger.debug(f"Attempted to add duplicate transaction: {description}, {amount}, {transaction_date}")
                     # Don't redirect, show the form again with the error message
-                    categories = Category.query.order_by(Category.name).all()
+                    categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
                     return render_template('add_transaction_manual.html',
                                          categories=categories,
                                          today=date.today(),
                                          form_data=request.form)
+
+                # Validate category belongs to current user if provided
+                if category_id:
+                    category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
+                    if not category:
+                        category_id = None  # Invalid category, set to None
 
                 # Create new transaction
                 new_transaction = Transaction(
@@ -445,7 +508,8 @@ def create_app():
                     description=description,
                     amount=amount,
                     account_source=account_source,
-                    category_id=category_id
+                    category_id=category_id,
+                    user_id=current_user.id
                 )
 
                 db.session.add(new_transaction)
@@ -459,14 +523,15 @@ def create_app():
                 app.logger.error(f'Error adding transaction: {e}')
 
         # For GET request, show the form
-        categories = Category.query.order_by(Category.name).all()
+        categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
         return render_template('add_transaction_manual.html',
                              categories=categories,
                              today=date.today())
 
     @app.route('/edit-transaction/<int:transaction_id>', methods=['GET', 'POST'])
+    @login_required
     def edit_transaction(transaction_id):
-        transaction = Transaction.query.get_or_404(transaction_id)
+        transaction = Transaction.query.filter_by(id=transaction_id, user_id=current_user.id).first_or_404()
 
         if request.method == 'POST':
             try:
@@ -475,7 +540,13 @@ def create_app():
                 transaction.amount = float(request.form['amount'])
                 transaction.account_source = request.form['account_source']
                 category_id = request.form.get('category_id')
-                transaction.category_id = category_id if category_id else None
+
+                # Validate category belongs to current user if provided
+                if category_id:
+                    category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
+                    transaction.category_id = category.id if category else None
+                else:
+                    transaction.category_id = None
 
                 db.session.commit()
                 flash('Transaction updated successfully!', 'success')
@@ -485,14 +556,15 @@ def create_app():
                 flash(f'Error updating transaction: {str(e)}', 'error')
                 app.logger.error(f'Error updating transaction: {e}')
 
-        categories = Category.query.order_by(Category.name).all()
+        categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
         return render_template('edit_transaction.html',
                              transaction=transaction,
                              categories=categories)
 
     @app.route('/delete-transaction/<int:transaction_id>', methods=['POST'])
+    @login_required
     def delete_transaction(transaction_id):
-        transaction = Transaction.query.get_or_404(transaction_id)
+        transaction = Transaction.query.filter_by(id=transaction_id, user_id=current_user.id).first_or_404()
         try:
             db.session.delete(transaction)
             db.session.commit()
@@ -504,17 +576,18 @@ def create_app():
         return redirect(url_for('transactions'))
 
     @app.route('/delete-all-transactions', methods=['POST'])
+    @login_required
     def delete_all_transactions():
         try:
-            transaction_count = Transaction.query.count()
+            transaction_count = Transaction.query.filter_by(user_id=current_user.id).count()
             if transaction_count == 0:
                 flash('No transactions to delete.', 'info')
                 return redirect(url_for('transactions'))
 
-            Transaction.query.delete()
+            Transaction.query.filter_by(user_id=current_user.id).delete()
             db.session.commit()
             flash(f'Successfully deleted all {transaction_count} transactions!', 'success')
-            app.logger.info(f'Deleted all {transaction_count} transactions')
+            app.logger.info(f'Deleted all {transaction_count} transactions for user {current_user.id}')
         except Exception as e:
             db.session.rollback()
             flash(f'Error deleting all transactions: {str(e)}', 'error')
@@ -523,31 +596,35 @@ def create_app():
 
     # Keep existing category management routes
     @app.route('/manage-categories')
+    @login_required
     def serve_category_manager_html():
         return render_template('category_manager.html')
 
     # Keep all existing category API endpoints
     @app.route('/api/categories', methods=['GET'])
+    @login_required
     def get_categories():
         try:
-            categories = Category.query.order_by(Category.name).all()
+            categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
             return jsonify([category.to_dict() for category in categories])
         except Exception as e:
             app.logger.error(f"Error getting categories: {e}")
             return jsonify({"error": "Failed to retrieve categories"}), 500
 
     @app.route('/api/categories', methods=['POST'])
+    @login_required
+    @csrf.exempt
     def add_category():
         data = request.get_json()
         if not data or not data.get('name') or not data.get('name').strip():
             return jsonify({'error': 'Category name is required and cannot be empty'}), 400
 
         name = data['name'].strip()
-        if Category.query.filter(db.func.lower(Category.name) == db.func.lower(name)).first():
+        if Category.query.filter(db.func.lower(Category.name) == db.func.lower(name), Category.user_id == current_user.id).first():
             return jsonify({'error': f'Category named "{name}" already exists (case-insensitive).'}), 409
 
         try:
-            new_category = Category(name=name)
+            new_category = Category(name=name, user_id=current_user.id)
             db.session.add(new_category)
             db.session.commit()
             app.logger.info(f"Added category: {name}")
@@ -558,15 +635,18 @@ def create_app():
             return jsonify({"error": f"Failed to add category {name}"}), 500
 
     @app.route('/api/categories/<int:category_id>', methods=['PUT'])
+    @login_required
+    @csrf.exempt
     def update_category(category_id):
-        category = Category.query.get_or_404(category_id)
+        category = Category.query.filter_by(id=category_id, user_id=current_user.id).first_or_404()
         data = request.get_json()
         if not data or not data.get('name') or not data.get('name').strip():
             return jsonify({'error': 'New category name is required and cannot be empty'}), 400
 
         new_name = data['name'].strip()
         existing_category = Category.query.filter(
-            db.func.lower(Category.name) == db.func.lower(new_name)
+            db.func.lower(Category.name) == db.func.lower(new_name),
+            Category.user_id == current_user.id
         ).filter(Category.id != category_id).first()
 
         if existing_category:
@@ -583,8 +663,10 @@ def create_app():
             return jsonify({"error": f"Failed to update category {category.name}"}), 500
 
     @app.route('/api/categories/<int:category_id>', methods=['DELETE'])
+    @login_required
+    @csrf.exempt
     def delete_category(category_id):
-        category = Category.query.get_or_404(category_id)
+        category = Category.query.filter_by(id=category_id, user_id=current_user.id).first_or_404()
         try:
             category_name = category.name
             db.session.delete(category)
@@ -597,8 +679,10 @@ def create_app():
             return jsonify({"error": f"Failed to delete category {category.name}"}), 500
 
     @app.route('/api/categories/<int:category_id>/rules', methods=['POST'])
+    @login_required
+    @csrf.exempt
     def add_rule_to_category(category_id):
-        category = Category.query.get_or_404(category_id)
+        category = Category.query.filter_by(id=category_id, user_id=current_user.id).first_or_404()
         data = request.get_json()
         if not data or not data.get('keyword_pattern') or not data.get('keyword_pattern').strip():
             return jsonify({'error': 'Keyword pattern is required and cannot be empty'}), 400
@@ -619,8 +703,14 @@ def create_app():
             return jsonify({"error": f"Failed to add rule to category {category.name}"}), 500
 
     @app.route('/api/rules/<int:rule_id>', methods=['PUT'])
+    @login_required
+    @csrf.exempt
     def update_rule(rule_id):
         rule = Rule.query.get_or_404(rule_id)
+        # Verify that the rule belongs to a category owned by the current user
+        if rule.category.user_id != current_user.id:
+            return jsonify({'error': 'Access denied'}), 403
+
         data = request.get_json()
         if not data or not data.get('keyword_pattern') or not data.get('keyword_pattern').strip():
             return jsonify({'error': 'New keyword pattern is required and cannot be empty'}), 400
@@ -648,8 +738,14 @@ def create_app():
             return jsonify({"error": "Failed to update rule"}), 500
 
     @app.route('/api/rules/<int:rule_id>', methods=['DELETE'])
+    @login_required
+    @csrf.exempt
     def delete_rule(rule_id):
         rule = Rule.query.get_or_404(rule_id)
+        # Verify that the rule belongs to a category owned by the current user
+        if rule.category.user_id != current_user.id:
+            return jsonify({'error': 'Access denied'}), 403
+
         try:
             category_id = rule.category_id
             keyword_pattern = rule.keyword_pattern
@@ -664,15 +760,18 @@ def create_app():
             return jsonify({"error": "Failed to delete rule"}), 500
 
     @app.route('/api/available-months')
+    @login_required
     def get_available_months():
         """Get all months that have transaction data"""
         from sqlalchemy import func, distinct
 
-        # Get distinct year-month combinations from transactions
+        # Get distinct year-month combinations from transactions for current user
         months_data = db.session.query(
             extract('year', Transaction.date).label('year'),
             extract('month', Transaction.date).label('month'),
             func.count(Transaction.id).label('transaction_count')
+        ).filter(
+            Transaction.user_id == current_user.id
         ).group_by(
             extract('year', Transaction.date),
             extract('month', Transaction.date)
@@ -695,16 +794,19 @@ def create_app():
 
     # Budget API endpoints
     @app.route('/api/budgets/<int:year>/<int:month>', methods=['GET'])
+    @login_required
     def get_budgets(year, month):
         """Get all budgets for a specific month/year"""
         try:
-            budgets = Budget.query.filter_by(month=month, year=year).all()
+            budgets = Budget.query.filter_by(month=month, year=year, user_id=current_user.id).all()
             return jsonify([budget.to_dict() for budget in budgets])
         except Exception as e:
             app.logger.error(f"Error getting budgets for {year}-{month}: {e}")
             return jsonify({"error": "Failed to retrieve budgets"}), 500
 
     @app.route('/api/budgets', methods=['POST'])
+    @login_required
+    @csrf.exempt
     def set_budget():
         """Set or update a budget for a category/month/year"""
         data = request.get_json()
@@ -731,17 +833,18 @@ def create_app():
         if budgeted_amount < 0:
             return jsonify({'error': 'Budget amount cannot be negative'}), 400
 
-        # Check if category exists
-        category = Category.query.get(category_id)
+        # Check if category exists and belongs to current user
+        category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
         if not category:
             return jsonify({'error': 'Category not found'}), 404
 
         try:
-            # Check if budget already exists
+            # Check if budget already exists for this user
             existing_budget = Budget.query.filter_by(
                 category_id=category_id,
                 month=month,
-                year=year
+                year=year,
+                user_id=current_user.id
             ).first()
 
             if existing_budget:
@@ -756,7 +859,8 @@ def create_app():
                     category_id=category_id,
                     month=month,
                     year=year,
-                    budgeted_amount=budgeted_amount
+                    budgeted_amount=budgeted_amount,
+                    user_id=current_user.id
                 )
                 db.session.add(new_budget)
                 db.session.commit()
@@ -769,9 +873,11 @@ def create_app():
             return jsonify({"error": "Failed to set budget"}), 500
 
     @app.route('/api/budgets/<int:budget_id>', methods=['DELETE'])
+    @login_required
+    @csrf.exempt
     def delete_budget(budget_id):
         """Delete a budget"""
-        budget = Budget.query.get_or_404(budget_id)
+        budget = Budget.query.filter_by(id=budget_id, user_id=current_user.id).first_or_404()
         try:
             category_name = budget.category.name if budget.category else 'Unknown'
             db.session.delete(budget)
@@ -783,44 +889,84 @@ def create_app():
             app.logger.error(f"Error deleting budget ID {budget_id}: {e}")
             return jsonify({"error": "Failed to delete budget"}), 500
 
+    @app.route('/api/add-default-categories', methods=['POST'])
+    @login_required
+    @csrf.exempt
+    def add_default_categories():
+        """Add default categories for the current user"""
+        try:
+            # Check if user already has categories
+            existing_categories = Category.query.filter_by(user_id=current_user.id).count()
+            if existing_categories > 0:
+                return jsonify({'error': 'User already has categories'}), 400
+
+            # Create default categories for this user
+            create_default_categories_for_user(current_user.id)
+
+            app.logger.info(f"Added default categories for user: {current_user.email}")
+            return jsonify({'message': 'Default categories added successfully'}), 200
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error adding default categories for user {current_user.id}: {e}")
+            return jsonify({'error': 'Failed to add default categories'}), 500
+
     # --- CLI commands for DB management ---
     @app.cli.command("init-db")
     def init_db_command():
         db.create_all()
         app.logger.info("Initialized the database and created/updated tables based on models.")
         app.logger.info("To manage database migrations for production, use: flask db init, flask db migrate, flask db upgrade")
+        app.logger.info("Default categories will be created automatically when users register.")
 
-        if not Category.query.first():
-            app.logger.info("Database is empty. Seeding default categories and rules...")
-            default_categories_rules = {
-                "Groceries": ["superstore", "save on foods", "wal-mart groceries"],
-                "Dining Out/Cafe": ["mcdonald's", "tim hortons", "starbucks", "subway", "pizza"],
-                "Food Delivery": ["uber eats", "doordash", "skipTheDishes"],
-                "Bills/Utilities": ["fido mobile", "fortisbc energy", "hydro"],
-                "Subscriptions/Entertainment": ["netflix.com", "spotify", "disney plus"],
-                "Subscriptions/Services": ["apple.com/bill", "google cloud"],
-                "Shopping/Online": ["amazon.ca", "temu.com", "ebay"],
-                "Shopping/General Merchandise": ["wal-mart", "dollarama", "winners"],
-                "Healthcare": ["pharmacy", "clinic", "dental"],
-                "Insurance": ["icbc", "square one insurance", "life insurance"],
-                "Car": ["gas station", "esso", "shell", "petro-canada", "mechanic", "car wash"],
-                "Investments": ["questrade", "wealthsimple"],
-                "Transfers": ["e-transfer", "send money"],
-                "Credit Card Payment": ["payment - thank you", "cibc visa payment", "td mc payment"],
-                "Housing": ["rent", "mortgage", "strata fee"],
-                "Childcare/Education": ["daycare", "school fees"],
-                "Travel": ["expedia", "booking.com", "airbnb", "flights"],
-                "Miscellaneous": ["misc", "other"]
-            }
+    @app.cli.command("create-default-categories")
+    def create_default_categories_command():
+        """Create default categories for existing users or a specific user."""
+        import click
+
+        users = User.query.all()
+        if not users:
+            app.logger.info("No users found. Categories will be created when users register.")
+            return
+
+        default_categories_rules = {
+            "Groceries": ["superstore", "save on foods", "wal-mart groceries"],
+            "Dining Out/Cafe": ["mcdonald's", "tim hortons", "starbucks", "subway", "pizza"],
+            "Food Delivery": ["uber eats", "doordash", "skipTheDishes"],
+            "Bills/Utilities": ["fido mobile", "fortisbc energy", "hydro"],
+            "Subscriptions/Entertainment": ["netflix.com", "spotify", "disney plus"],
+            "Subscriptions/Services": ["apple.com/bill", "google cloud"],
+            "Shopping/Online": ["amazon.ca", "temu.com", "ebay"],
+            "Shopping/General Merchandise": ["wal-mart", "dollarama", "winners"],
+            "Healthcare": ["pharmacy", "clinic", "dental"],
+            "Insurance": ["icbc", "square one insurance", "life insurance"],
+            "Car": ["gas station", "esso", "shell", "petro-canada", "mechanic", "car wash"],
+            "Investments": ["questrade", "wealthsimple"],
+            "Transfers": ["e-transfer", "send money"],
+            "Credit Card Payment": ["payment - thank you", "cibc visa payment", "td mc payment"],
+            "Housing": ["rent", "mortgage", "strata fee"],
+            "Childcare/Education": ["daycare", "school fees"],
+            "Travel": ["expedia", "booking.com", "airbnb", "flights"],
+            "Miscellaneous": ["misc", "other"]
+        }
+
+        for user in users:
+            if Category.query.filter_by(user_id=user.id).first():
+                app.logger.info(f"User {user.email} already has categories, skipping...")
+                continue
+
+            app.logger.info(f"Creating default categories for user: {user.email}")
             for cat_name, rules_list in default_categories_rules.items():
-                category = Category(name=cat_name)
+                category = Category(name=cat_name, user_id=user.id)
                 db.session.add(category)
                 db.session.flush()
                 for rule_kw in rules_list:
                     rule = Rule(keyword_pattern=rule_kw, category_id=category.id)
                     db.session.add(rule)
             db.session.commit()
-            app.logger.info("Successfully seeded default categories and rules.")
+            app.logger.info(f"Successfully created default categories for user: {user.email}")
+
+
 
     with app.app_context():
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
