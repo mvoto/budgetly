@@ -19,6 +19,13 @@
             <a href="{{ url_for('transactions') }}">Transactions</a>
             <a href="{{ url_for('serve_category_manager_html') }}">Manage Categories</a>
         </nav>
+        <div class="user-info">
+            <span>Welcome, {{ current_user.email }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </a>
+        </div>
     </header>
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}

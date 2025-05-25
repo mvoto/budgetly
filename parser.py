@@ -33,7 +33,7 @@ def _parse_amount(debit_str, credit_str=None):
         return credit
     return 0.0
 
-def _parse_td_common(file_path, account_source):
+def _parse_td_common(file_path, account_source, user_id=None):
     transactions = []
     try:
         with open(file_path, 'r', encoding='utf-8-sig') as f: # utf-8-sig to handle potential BOM
@@ -81,7 +81,7 @@ def _parse_td_common(file_path, account_source):
                     if date_str and description and amount != 0.0:
                         try:
                             transaction_date = datetime.strptime(date_str, '%m/%d/%Y').date()
-                            category_name = assign_category(description)
+                            category_name = assign_category(description, user_id)
                             logger.debug(f"  Assigned category: {category_name}")
 
                             transactions.append({
@@ -104,7 +104,7 @@ def _parse_td_common(file_path, account_source):
     logger.info(f"Parsed {len(transactions)} transactions from TD Common file")
     return transactions
 
-def _parse_td_chequing_new(file_path, account_source):
+def _parse_td_chequing_new(file_path, account_source, user_id=None):
     transactions = []
     try:
         with open(file_path, 'r', encoding='utf-8-sig') as f:
@@ -122,7 +122,7 @@ def _parse_td_chequing_new(file_path, account_source):
 
                     if date_str and description and amount != 0.0:
                         transaction_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                        category_name = assign_category(description)
+                        category_name = assign_category(description, user_id)
                         transactions.append({
                             'date': transaction_date,
                             'description': description,
@@ -137,7 +137,7 @@ def _parse_td_chequing_new(file_path, account_source):
         print(f"Error reading TD Chequing file {file_path}: {e}")
     return transactions
 
-def _parse_amex(file_path, account_source):
+def _parse_amex(file_path, account_source, user_id=None):
     transactions = []
     try:
         with open(file_path, 'r', encoding='utf-8-sig') as f:
@@ -178,7 +178,7 @@ def _parse_amex(file_path, account_source):
                     if date_str and description and amount != 0.0:
                         # Date format example: 17 May 2025
                         transaction_date = datetime.strptime(date_str, '%d %b %Y').date()
-                        category_name = assign_category(description)
+                        category_name = assign_category(description, user_id)
                         transactions.append({
                             'date': transaction_date,
                             'description': description,
@@ -193,7 +193,7 @@ def _parse_amex(file_path, account_source):
         print(f"Error reading Amex file {file_path}: {e}")
     return transactions
 
-def _parse_td_generic(file_path, account_source):
+def _parse_td_generic(file_path, account_source, user_id=None):
     """
     Generic TD parser that handles both date formats:
     - YYYY-MM-DD (like accountactivity.csv)
@@ -245,7 +245,7 @@ def _parse_td_generic(file_path, account_source):
                             logger.error(f"  Could not parse date '{date_str}' with any known format")
                             continue
 
-                        category_name = assign_category(description)
+                        category_name = assign_category(description, user_id)
                         logger.debug(f"  Assigned category: {category_name}")
 
                         transactions.append({
@@ -266,21 +266,21 @@ def _parse_td_generic(file_path, account_source):
     logger.info(f"Parsed {len(transactions)} transactions from TD Generic file")
     return transactions
 
-def process_uploaded_file(file_path, original_filename):
+def process_uploaded_file(file_path, original_filename, user_id=None):
     logger.info(f"Processing file: {original_filename}")
     original_filename_lower = original_filename.lower()
     parsed_txns = []
 
     if 'amex' in original_filename_lower:
         logger.info(f"Processing as Amex file")
-        parsed_txns = _parse_amex(file_path, 'American Express')
+        parsed_txns = _parse_amex(file_path, 'American Express', user_id)
     elif 'td' in original_filename_lower:
         # Try to differentiate TD file types
         # Most TD files use the Common format with MM/DD/YYYY dates
         # Only use the Chequing format if specifically indicated
         if 'chequing' in original_filename_lower or 'chq' in original_filename_lower:
             logger.info(f"Processing as TD Chequing file")
-            parsed_txns = _parse_td_chequing_new(file_path, 'TD Chequing')
+            parsed_txns = _parse_td_chequing_new(file_path, 'TD Chequing', user_id)
         else:
             # Default to TD Common parser for most TD files
             if 'cb' in original_filename_lower:
@@ -290,18 +290,18 @@ def process_uploaded_file(file_path, original_filename):
             else:
                 account_name = 'TD Account'  # Generic TD account
             logger.info(f"Processing as TD Common file: {account_name}")
-            parsed_txns = _parse_td_common(file_path, account_name)
+            parsed_txns = _parse_td_common(file_path, account_name, user_id)
     elif ('accountactivity' in original_filename_lower or
           'account_activity' in original_filename_lower or
           'statement' in original_filename_lower or
           'export' in original_filename_lower):
         # Generic TD/bank export files
         logger.info(f"Processing as generic TD/bank export file")
-        parsed_txns = _parse_td_generic(file_path, 'TD Account')
+        parsed_txns = _parse_td_generic(file_path, 'TD Account', user_id)
     else:
         # Try the generic TD parser as a fallback for unknown CSV files
         logger.info(f"Unknown file type '{original_filename}', trying generic TD parser as fallback")
-        parsed_txns = _parse_td_generic(file_path, 'Bank Account')
+        parsed_txns = _parse_td_generic(file_path, 'Bank Account', user_id)
 
     logger.info(f"Parsed {len(parsed_txns)} transactions")
 
@@ -311,16 +311,19 @@ def process_uploaded_file(file_path, original_filename):
         from extensions import db
         for txn_data in parsed_txns:
             try:
-                # Get the category_id from the category_name
+                # Get the category_id from the category_name for this specific user
                 category_name = txn_data.pop('category_name', None)
                 category_id = None
-                if category_name:
-                    category = db.session.query(Category).filter(Category.name == category_name).first()
+                if category_name and user_id:
+                    category = db.session.query(Category).filter(
+                        Category.name == category_name,
+                        Category.user_id == user_id
+                    ).first()
                     if category:
                         category_id = category.id
                         logger.debug(f"Found category_id {category_id} for category '{category_name}'")
                     else:
-                        logger.warning(f"No category found for name '{category_name}'")
+                        logger.warning(f"No category found for name '{category_name}' for user {user_id}")
 
                 # Create the transaction with the category_id
                 transaction = Transaction(

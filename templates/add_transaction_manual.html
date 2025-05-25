@@ -35,6 +35,7 @@
         <section class="form-section">
             <h2>Add Transaction</h2>
             <form method="POST" action="{{ url_for('add_transaction') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="form-group">
                     <label for="date">Date:</label>
                     <input type="date" id="date" name="date" value="{{ today.strftime('%Y-%m-%d') }}" required>
