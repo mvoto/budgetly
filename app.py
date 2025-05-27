@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 def create_default_categories_for_user(user_id):
     """Helper function to create default categories for a new user."""
@@ -49,6 +49,7 @@ def create_default_categories_for_user(user_id):
         "Credit Card Payment": ["payment - thank you", "cibc visa payment", "td mc payment"],
         "Housing": ["rent", "mortgage", "strata fee"],
         "Childcare/Education": ["daycare", "school fees"],
+        "Therapy": [],
         "Travel": ["expedia", "booking.com", "airbnb", "flights"],
         "Miscellaneous": ["misc", "other"]
     }
@@ -946,6 +947,7 @@ def create_app():
             "Credit Card Payment": ["payment - thank you", "cibc visa payment", "td mc payment"],
             "Housing": ["rent", "mortgage", "strata fee"],
             "Childcare/Education": ["daycare", "school fees"],
+            "Therapy": [],
             "Travel": ["expedia", "booking.com", "airbnb", "flights"],
             "Miscellaneous": ["misc", "other"]
         }
@@ -968,13 +970,15 @@ def create_app():
 
 
 
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
     with app.app_context():
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])
         db.create_all()
+    app.run(debug=True, port=5001)
 
-    return app
-
-if __name__ == '__main__':
-    application = create_app()
-    application.run(debug=True, port=5001)
+# For production (Gunicorn will call create_app)
+app = create_app()

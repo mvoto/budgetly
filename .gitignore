@@ -9,6 +9,10 @@ venv/
 ENV/
 env/
 
+# Environment variables
+.env
+.env.*
+
 # IDE specific files
 .vscode/
 .idea/
