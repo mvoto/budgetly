@@ -132,10 +132,10 @@ if __name__ == '__main__':
     ]
     for desc in test_descriptions:
         category = assign_category(desc)
-        print(f"> '{desc}' -> '{category or "Uncategorized"}'")
+        print(f"> '{desc}' -> '{category or 'Uncategorized'}'")
 
     print("\nTest with a wildcard rule (if seeded): e.g. 'hp *instant ink'")
     hp_test = assign_category("Payment to HP for instant ink service")
-    print(f"> 'Payment to HP for instant ink service' -> '{hp_test or "Uncategorized"}'")
+    print(f"> 'Payment to HP for instant ink service' -> '{hp_test or 'Uncategorized'}'")
 
     print("\nIf your database is empty, run 'flask init-db' in your app directory.")
