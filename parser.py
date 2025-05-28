@@ -142,18 +142,21 @@ def _parse_amex(file_path, account_source, user_id=None):
     try:
         with open(file_path, 'r', encoding='utf-8-sig') as f:
             reader = csv.reader(f)
+
+            # Read first line and check if it's a header or "Table 1"
             try:
                 first_line = next(reader)
-                if not (len(first_line) > 0 and first_line[0].strip().lower() == 'table 1'):
-                    # If first line is not 'Table 1', reset file pointer or re-evaluate if it's a header
-                    f.seek(0) # Reset to beginning if first line wasn't 'Table 1'
-            except StopIteration:
-                return [] # Empty file
+                header = first_line
 
-            try:
-                 header = next(reader) # Read the actual header row
+                # If the first line is 'Table 1', read the next line as header
+                if len(first_line) > 0 and first_line[0].strip().lower() == 'table 1':
+                    try:
+                        header = next(reader)  # Read the actual header row
+                    except StopIteration:
+                        return []  # File only had 'Table 1' or was empty after that
+
             except StopIteration:
-                return [] # File only had 'Table 1' or was empty after that
+                return []  # Empty file
 
             # Find column indices dynamically from header
             try:
@@ -161,7 +164,7 @@ def _parse_amex(file_path, account_source, user_id=None):
                 desc_col = header.index('Description')
                 amount_col = header.index('Amount')
             except ValueError:
-                print(f"Amex file {file_path} has missing expected columns in header: {header}")
+                logger.error(f"Amex file {file_path} has missing expected columns in header: {header}")
                 return []
 
             for row in reader:
@@ -170,14 +173,50 @@ def _parse_amex(file_path, account_source, user_id=None):
                 try:
                     date_str = row[date_col].strip()
                     description = row[desc_col].strip()
-                    amount_str = row[amount_col].strip().replace('$', '').replace(',', '')
+                    amount_str = row[amount_col].strip()
 
-                    # Amex amounts are charges, so they are expenses (negative for us)
-                    amount = -float(amount_str) if amount_str else 0.0
+                    # Skip empty rows or rows with empty amounts
+                    if not date_str or not description or not amount_str:
+                        continue
+
+                                        # Handle negative amounts that are already prefixed with minus
+                    # Remove $ symbol and commas, handle negative signs
+                    amount_clean = amount_str.replace('$', '').replace(',', '').strip()
+
+                    # Check if it's a payment (credit) - these come with negative amounts or payment descriptions
+                    is_payment = 'PAYMENT RECEIVED' in description.upper() or 'PAYMENT' in description.upper()
+
+                    # Parse the amount (including negative sign if present)
+                    amount = float(amount_clean) if amount_clean else 0.0
+
+                    # For payments that come as negative in the CSV, make them positive (credits to account)
+                    # For regular charges, make them negative (expenses)
+                    if is_payment and amount < 0:
+                        amount = -amount  # Convert negative payment to positive credit
+                    elif not is_payment and amount > 0:
+                        amount = -amount  # Convert positive charge to negative expense
 
                     if date_str and description and amount != 0.0:
-                        # Date format example: 17 May 2025
-                        transaction_date = datetime.strptime(date_str, '%d %b %Y').date()
+                                                # Try different date formats for AmEx
+                        transaction_date = None
+
+                        # Clean the date string first - remove periods from month abbreviations
+                        clean_date_str = date_str.replace('.', '')
+
+                        date_formats = ['%d %b %Y', '%d %B %Y', '%m/%d/%Y', '%Y-%m-%d']
+
+                        for date_format in date_formats:
+                            try:
+                                transaction_date = datetime.strptime(clean_date_str, date_format).date()
+                                logger.debug(f"Successfully parsed AmEx date '{date_str}' (cleaned: '{clean_date_str}') with format: {date_format}")
+                                break
+                            except ValueError:
+                                continue
+
+                        if transaction_date is None:
+                            logger.error(f"Could not parse AmEx date '{date_str}' with any known format")
+                            continue
+
                         category_name = assign_category(description, user_id)
                         transactions.append({
                             'date': transaction_date,
@@ -186,11 +225,13 @@ def _parse_amex(file_path, account_source, user_id=None):
                             'account_source': account_source,
                             'category_name': category_name
                         })
+                        logger.debug(f"Added AmEx transaction: {description}, ${amount}")
+
                 except (IndexError, ValueError) as e:
-                    print(f"Skipping row in Amex due to error: {row} - {e}")
+                    logger.error(f"Skipping row in Amex due to error: {row} - {e}")
                     continue
     except Exception as e:
-        print(f"Error reading Amex file {file_path}: {e}")
+        logger.error(f"Error reading Amex file {file_path}: {e}")
     return transactions
 
 def _parse_td_generic(file_path, account_source, user_id=None):
@@ -271,7 +312,23 @@ def process_uploaded_file(file_path, original_filename, user_id=None):
     original_filename_lower = original_filename.lower()
     parsed_txns = []
 
-    if 'amex' in original_filename_lower:
+    # First, try to detect file type by examining the header
+    amex_file = False
+    try:
+        with open(file_path, 'r', encoding='utf-8-sig') as f:
+            reader = csv.reader(f)
+            first_line = next(reader, [])
+            # Check if it's an AmEx file by looking for characteristic columns
+            if (len(first_line) > 4 and
+                'Date' in first_line and
+                'Description' in first_line and
+                'Amount' in first_line and
+                ('Cardmember' in first_line or 'Foreign Spend Amount' in first_line)):
+                amex_file = True
+    except Exception as e:
+        logger.warning(f"Could not examine file header for type detection: {e}")
+
+    if 'amex' in original_filename_lower or amex_file:
         logger.info(f"Processing as Amex file")
         parsed_txns = _parse_amex(file_path, 'American Express', user_id)
     elif 'td' in original_filename_lower:

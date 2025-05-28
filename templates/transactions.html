@@ -188,7 +188,7 @@
                     <tbody>
                         {% for t in transactions %}
                         <tr>
-                            <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ t.date.strftime('%d/%m/%Y') }}</td>
                             <td>{{ t.description }}</td>
                             <td class="{% if t.amount < 0 %}negative{% else %}positive{% endif %}">${{ "%.2f"|format(t.amount) }}</td>
                             <td>{{ t.account_source }}</td>
