@@ -21,6 +21,12 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField('Register')
 
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data.lower()).first()
-        if user:
-            raise ValidationError('Email already registered. Please use a different email.')
+        try:
+            user = User.query.filter_by(email=email.data.lower()).first()
+            if user:
+                raise ValidationError('Email already registered. Please use a different email.')
+        except Exception as e:
+            # Log the error but don't block registration if DB query fails
+            print(f"Database query error during email validation: {e}")
+            # Let the registration proceed and handle duplicate email error later
+            pass

@@ -39,14 +39,21 @@ def register():
 
             # Import the helper function to create default categories
             from app import create_default_categories_for_user
-            create_default_categories_for_user(user.id)
+            try:
+                create_default_categories_for_user(user.id)
+            except Exception as cat_error:
+                print(f"Warning: Could not create default categories: {cat_error}")
+                # Don't fail registration if default categories fail
 
             flash('Registration successful! You can now log in.', 'success')
             return redirect(url_for('auth.login'))
         except Exception as e:
             db.session.rollback()
-            print(f"Registration error: {e}")  # Debug line - can be removed later
-            flash('An error occurred during registration. Please try again.', 'error')
+            print(f"Registration error: {e}")
+            if 'duplicate' in str(e).lower() or 'unique' in str(e).lower():
+                flash('Email already registered. Please use a different email.', 'error')
+            else:
+                flash('An error occurred during registration. Please try again.', 'error')
     return render_template('auth/register.html', title='Register', form=form)
 
 @auth.route('/logout')

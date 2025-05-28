@@ -979,6 +979,10 @@ if __name__ == '__main__':
             os.makedirs(app.config['UPLOAD_FOLDER'])
         db.create_all()
     app.run(debug=True, port=5001)
-
-# For production (Gunicorn will call create_app)
-app = create_app()
+else:
+    # For production (Gunicorn will import this)
+    app = create_app()
+    with app.app_context():
+        # Ensure upload folder exists
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
