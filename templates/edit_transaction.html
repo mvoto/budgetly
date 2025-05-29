@@ -193,11 +193,11 @@
         <h1>Budgetly</h1>
         <nav>
             <a href="{{ url_for('home') }}">Dashboard</a>
-            <a href="{{ url_for('transactions') }}">Transactions</a>
+            <a href="{{ url_for('transactions') }}" class="active">Transactions</a>
             <a href="{{ url_for('serve_category_manager_html') }}">Manage Categories</a>
         </nav>
         <div class="user-info">
-            <span>Welcome, {{ current_user.email }}</span>
+            <a href="{{ url_for('auth.account') }}" class="user-welcome">Welcome, {{ current_user.email }}</a>
             <a href="{{ url_for('auth.logout') }}" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
                 Logout

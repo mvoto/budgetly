@@ -30,3 +30,15 @@ class RegistrationForm(FlaskForm):
             print(f"Database query error during email validation: {e}")
             # Let the registration proceed and handle duplicate email error later
             pass
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[
+        DataRequired(),
+        Length(min=8, message='New password must be at least 8 characters long')
+    ])
+    confirm_password = PasswordField('Confirm New Password', validators=[
+        DataRequired(),
+        EqualTo('new_password', message='Passwords must match')
+    ])
+    submit = SubmitField('Update Password')
