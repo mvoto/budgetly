@@ -135,6 +135,28 @@
             </div>
         </section>
 
+        <!-- Fixed Costs Analysis Section -->
+        <section class="fixed-costs-analysis">
+            <h2>Fixed vs Variable Costs Analysis</h2>
+            <div id="fixedCostsLoading" class="loading-message">Loading analysis...</div>
+            <div id="fixedCostsContent" style="display: none;">
+                <div class="costs-summary">
+                    <div class="cost-type-card fixed-costs">
+                        <h3>Fixed Costs</h3>
+                        <div class="cost-amount" id="fixedCostsAmount">$0.00</div>
+                        <div class="cost-percentage" id="fixedCostsPercentage">0%</div>
+                        <div class="cost-description">Regular, predictable expenses</div>
+                    </div>
+                    <div class="cost-type-card variable-costs">
+                        <h3>Variable Costs</h3>
+                        <div class="cost-amount" id="variableCostsAmount">$0.00</div>
+                        <div class="cost-percentage" id="variableCostsPercentage">0%</div>
+                        <div class="cost-description">Flexible, discretionary expenses</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <div class="dashboard-actions">
             <h3>Quick Actions</h3>
             <div class="action-buttons">
@@ -384,7 +406,39 @@
                 expenseCtx.textAlign = 'center';
                 expenseCtx.fillText('No expense data', expenseCanvas.width/2, expenseCanvas.height/2);
             }
+
+            // Load fixed costs analysis
+            loadFixedCostsAnalysis();
         });
+
+        // Fixed Costs Analysis Functions
+        async function loadFixedCostsAnalysis() {
+            const loadingEl = document.getElementById('fixedCostsLoading');
+            const contentEl = document.getElementById('fixedCostsContent');
+
+            try {
+                const response = await fetch(`/api/fixed-costs-analysis/${currentYear}/${currentMonth}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Update summary cards
+                document.getElementById('fixedCostsAmount').textContent = `$${data.fixed_costs.total}`;
+                document.getElementById('fixedCostsPercentage').textContent = `${data.fixed_costs.percentage}%`;
+                document.getElementById('variableCostsAmount').textContent = `$${data.variable_costs.total}`;
+                document.getElementById('variableCostsPercentage').textContent = `${data.variable_costs.percentage}%`;
+
+                // Show content and hide loading
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading fixed costs analysis:', error);
+                loadingEl.innerHTML = `<p style="color: var(--error-color);">Error loading analysis: ${error.message}</p>`;
+            }
+        }
 
         // Budget Management Functions
         const currentMonth = {{ current_month_num }};
