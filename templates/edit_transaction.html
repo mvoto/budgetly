@@ -7,7 +7,186 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Enhanced form styling for edit transaction page */
+        .form-section {
+            background-color: var(--white-color);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            border: 1px solid var(--gray-200);
+            max-width: 600px;
+            margin: 1.5rem auto;
+        }
+
+        .form-section h2 {
+            margin-top: 0;
+            color: var(--gray-800);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            border-bottom: 2px solid var(--gray-100);
+            padding-bottom: 1rem;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--gray-700);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            background-color: var(--white-color);
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        select:focus {
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            outline: none;
+        }
+
+        input::placeholder {
+            color: var(--gray-400);
+            font-style: italic;
+        }
+
+        /* Enhanced button styling */
+        button[type="submit"],
+        .btn {
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button[type="submit"]:hover,
+        .btn:hover {
+            background: linear-gradient(135deg, #4338CA 0%, #5B21B6 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+        }
+
+        button[type="submit"]:active,
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn[style*="background-color: #777"] {
+            background: linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%) !important;
+            box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+        }
+
+        .btn[style*="background-color: #777"]:hover {
+            background: linear-gradient(135deg, #4B5563 0%, #6B7280 100%) !important;
+            box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        /* User info styling */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--gray-700);
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logout-btn:hover {
+            background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+            transform: translateY(-1px);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .form-section {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            button[type="submit"],
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+
+        :root {
+            --primary-color: #4F46E5;
+            --white-color: #ffffff;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -17,37 +196,60 @@
             <a href="{{ url_for('transactions') }}">Transactions</a>
             <a href="{{ url_for('serve_category_manager_html') }}">Manage Categories</a>
         </nav>
+        <div class="user-info">
+            <span>Welcome, {{ current_user.email }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </a>
+        </div>
     </header>
     <main>
         <section class="form-section">
             <h2>Edit Transaction</h2>
             <form method="POST" action="{{ url_for('edit_transaction', transaction_id=transaction.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <label for="date">Date:</label>
-                <input type="date" id="date" name="date" value="{{ transaction.date.strftime('%Y-%m-%d') if transaction else '' }}" required>
 
-                <label for="description">Description:</label>
-                <input type="text" id="description" name="description" value="{{ transaction.description if transaction else '' }}" required>
+                <div class="form-group">
+                    <label for="date">Date:</label>
+                    <input type="date" id="date" name="date" value="{{ transaction.date.strftime('%Y-%m-%d') if transaction else '' }}" required>
+                </div>
 
-                <label for="amount">Amount:</label>
-                <input type="number" id="amount" name="amount" step="0.01" value="{{ transaction.amount if transaction else '' }}" required placeholder="Use negative for expenses">
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <input type="text" id="description" name="description" value="{{ transaction.description if transaction else '' }}" required
+                           placeholder="e.g., Starbucks Coffee, Grocery Shopping, Gas Fill-up">
+                </div>
 
-                <label for="account_source">Account Source:</label>
-                <input type="text" id="account_source" name="account_source" value="{{ transaction.account_source if transaction else '' }}" required>
+                <div class="form-group">
+                    <label for="amount">Amount:</label>
+                    <input type="number" id="amount" name="amount" step="0.01" value="{{ transaction.amount if transaction else '' }}" required
+                           placeholder="Use negative for expenses (e.g., -50.00) or positive for income">
+                </div>
 
-                <label for="category_id">Category:</label>
-                <select id="category_id" name="category_id">
-                    <option value="">-- Select Category (Optional) --</option>
-                    {% for category in categories %}
-                        <option value="{{ category.id }}"
-                                {% if transaction and transaction.category_id == category.id %}selected{% endif %}>
-                            {{ category.name }}
-                        </option>
-                    {% endfor %}
-                </select>
+                <div class="form-group">
+                    <label for="account_source">Account Source:</label>
+                    <input type="text" id="account_source" name="account_source" value="{{ transaction.account_source if transaction else '' }}" required
+                           placeholder="e.g., CIBC Visa, BMO Chequing, Cash, TD Savings">
+                </div>
 
-                <button type="submit">Update Transaction</button>
-                <a href="{{ url_for('transactions') }}" class="btn" style="margin-left: 10px; background-color: #777;">Cancel</a>
+                <div class="form-group">
+                    <label for="category_id">Category:</label>
+                    <select id="category_id" name="category_id">
+                        <option value="">-- Select Category (Optional) --</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}"
+                                    {% if transaction and transaction.category_id == category.id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit">Update Transaction</button>
+                    <a href="{{ url_for('transactions') }}" class="btn btn-secondary">Cancel</a>
+                </div>
             </form>
         </section>
     </main>

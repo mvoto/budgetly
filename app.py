@@ -32,6 +32,13 @@ def create_default_categories_for_user(user_id):
     from models import Category, Rule
     from extensions import db
 
+    # Define which categories should be marked as fixed costs
+    fixed_cost_categories = {
+        "Bills/Utilities",
+        "Insurance",
+        "Housing"
+    }
+
     default_categories_rules = {
         "Groceries": ["superstore", "save on foods", "wal-mart groceries"],
         "Dining Out/Cafe": ["mcdonald's", "tim hortons", "starbucks", "subway", "pizza"],
@@ -55,7 +62,8 @@ def create_default_categories_for_user(user_id):
     }
 
     for cat_name, rules_list in default_categories_rules.items():
-        category = Category(name=cat_name, user_id=user_id)
+        is_fixed_cost = cat_name in fixed_cost_categories
+        category = Category(name=cat_name, user_id=user_id, is_fixed_cost=is_fixed_cost)
         db.session.add(category)
         db.session.flush()
         for rule_kw in rules_list:
@@ -621,14 +629,16 @@ def create_app():
             return jsonify({'error': 'Category name is required and cannot be empty'}), 400
 
         name = data['name'].strip()
+        is_fixed_cost = data.get('is_fixed_cost', False)  # Default to False if not provided
+
         if Category.query.filter(db.func.lower(Category.name) == db.func.lower(name), Category.user_id == current_user.id).first():
             return jsonify({'error': f'Category named "{name}" already exists (case-insensitive).'}), 409
 
         try:
-            new_category = Category(name=name, user_id=current_user.id)
+            new_category = Category(name=name, user_id=current_user.id, is_fixed_cost=is_fixed_cost)
             db.session.add(new_category)
             db.session.commit()
-            app.logger.info(f"Added category: {name}")
+            app.logger.info(f"Added category: {name} (Fixed: {is_fixed_cost})")
             return jsonify(new_category.to_dict()), 201
         except Exception as e:
             db.session.rollback()
@@ -645,6 +655,8 @@ def create_app():
             return jsonify({'error': 'New category name is required and cannot be empty'}), 400
 
         new_name = data['name'].strip()
+        is_fixed_cost = data.get('is_fixed_cost', category.is_fixed_cost)  # Keep existing value if not provided
+
         existing_category = Category.query.filter(
             db.func.lower(Category.name) == db.func.lower(new_name),
             Category.user_id == current_user.id
@@ -655,8 +667,9 @@ def create_app():
 
         try:
             category.name = new_name
+            category.is_fixed_cost = is_fixed_cost
             db.session.commit()
-            app.logger.info(f"Updated category ID {category_id} to: {new_name}")
+            app.logger.info(f"Updated category ID {category_id} to: {new_name} (Fixed: {is_fixed_cost})")
             return jsonify(category.to_dict())
         except Exception as e:
             db.session.rollback()
@@ -792,6 +805,80 @@ def create_app():
             })
 
         return jsonify(available_months)
+
+    @app.route('/api/fixed-costs-analysis/<int:year>/<int:month>')
+    @login_required
+    def get_fixed_costs_analysis(year, month):
+        """Get fixed vs variable costs analysis for a specific month/year"""
+        from sqlalchemy import func
+        from datetime import date
+
+        try:
+            # Calculate start and end dates for the specified month
+            start_date = date(year, month, 1)
+            if month == 12:
+                end_date = date(year + 1, 1, 1)
+            else:
+                end_date = date(year, month + 1, 1)
+
+            # Get transactions for the month with category info
+            transactions_query = db.session.query(
+                Transaction.amount,
+                Category.is_fixed_cost,
+                Category.name
+            ).join(
+                Category, Transaction.category_id == Category.id, isouter=True
+            ).filter(
+                Transaction.date >= start_date,
+                Transaction.date < end_date,
+                Transaction.user_id == current_user.id,
+                Transaction.amount < 0  # Only expenses (negative amounts)
+            )
+
+            transactions = transactions_query.all()
+
+            # Calculate totals
+            fixed_costs_total = 0
+            variable_costs_total = 0
+            fixed_costs_categories = {}
+            variable_costs_categories = {}
+
+            for amount, is_fixed_cost, category_name in transactions:
+                abs_amount = abs(amount)  # Convert to positive for display
+                category_name = category_name or 'Uncategorized'
+
+                if is_fixed_cost:
+                    fixed_costs_total += abs_amount
+                    fixed_costs_categories[category_name] = fixed_costs_categories.get(category_name, 0) + abs_amount
+                else:
+                    variable_costs_total += abs_amount
+                    variable_costs_categories[category_name] = variable_costs_categories.get(category_name, 0) + abs_amount
+
+            total_expenses = fixed_costs_total + variable_costs_total
+
+            # Calculate percentages
+            fixed_percentage = (fixed_costs_total / total_expenses * 100) if total_expenses > 0 else 0
+            variable_percentage = (variable_costs_total / total_expenses * 100) if total_expenses > 0 else 0
+
+            return jsonify({
+                'month': month,
+                'year': year,
+                'month_name': calendar.month_name[month],
+                'fixed_costs': {
+                    'total': round(fixed_costs_total, 2),
+                    'percentage': round(fixed_percentage, 1),
+                    'categories': {k: round(v, 2) for k, v in fixed_costs_categories.items()}
+                },
+                'variable_costs': {
+                    'total': round(variable_costs_total, 2),
+                    'percentage': round(variable_percentage, 1),
+                    'categories': {k: round(v, 2) for k, v in variable_costs_categories.items()}
+                },
+                'total_expenses': round(total_expenses, 2)
+            })
+        except Exception as e:
+            app.logger.error(f"Error getting fixed costs analysis for {year}-{month}: {e}")
+            return jsonify({"error": "Failed to retrieve fixed costs analysis"}), 500
 
     # Budget API endpoints
     @app.route('/api/budgets/<int:year>/<int:month>', methods=['GET'])

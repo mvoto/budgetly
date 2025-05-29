@@ -200,6 +200,109 @@
             opacity: 1;
         }
 
+        /* Toggle switch styles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e2e8f0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 28px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 24px;
+            width: 24px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-slider:hover {
+            background-color: #cbd5e1;
+        }
+
+        input:checked + .toggle-slider {
+            background: linear-gradient(45deg, #4F46E5, #6366F1);
+        }
+
+        input:checked + .toggle-slider:hover {
+            background: linear-gradient(45deg, #4338CA, #5B21B6);
+        }
+
+        input:focus + .toggle-slider {
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            color: var(--gray-700);
+            font-weight: 500;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        /* Add hover effect to the entire toggle container */
+        .toggle-container:hover .toggle-label {
+            color: var(--gray-800);
+        }
+
+        /* Add a subtle animation when the toggle is clicked */
+        .toggle-switch input:active + .toggle-slider:before {
+            width: 28px;
+        }
+
+        /* Make the label clickable */
+        .toggle-container {
+            cursor: pointer;
+        }
+
+        /* Fixed costs indicator */
+        .fixed-cost-indicator {
+            background-color: var(--warning-color);
+            color: var(--gray-800);
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            font-weight: 500;
+        }
+
         :root {
             --primary-color: #667eea;
             --primary-hover: #5a6fd8;
@@ -225,6 +328,85 @@
             --box-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
             --transition: all 0.2s ease-in-out;
         }
+
+        .form-section h2 {
+            margin-top: 0;
+            color: var(--gray-800);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            outline: none;
+        }
+
+        .form-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Enhanced button styling */
+        .btn {
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #4338CA 0%, #5B21B6 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%);
+            box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #4B5563 0%, #6B7280 100%);
+            box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -249,8 +431,17 @@
             <h2>Add New Category</h2>
             <div class="form-group">
                 <input type="text" id="newCategoryName" placeholder="Enter new category name (e.g., Utilities)">
-                <button onclick="addCategory()" class="btn btn-primary">Add Category</button>
-                <p id="addCategoryError" class="error hidden"></p>
+                <div class="toggle-container">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="newCategoryFixedCost">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Fixed Cost</span>
+                </div>
+                <div class="form-actions">
+                    <button onclick="addCategory()" class="btn btn-primary">Add Category</button>
+                    <p id="addCategoryError" class="error hidden"></p>
+                </div>
             </div>
         </section>
 
@@ -266,9 +457,16 @@
     <!-- Edit Category Modal -->
     <div id="editCategoryModal" class="modal">
         <div class="modal-content">
-            <h3>Edit Category Name</h3>
+            <h3>Edit Category</h3>
             <div class="form-group">
                 <input type="text" id="editCategoryNameInput">
+                <div class="toggle-container">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="editCategoryFixedCost">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Fixed Cost</span>
+                </div>
                 <input type="hidden" id="editCategoryIdInput">
                 <p id="editCategoryError" class="error hidden"></p>
             </div>
@@ -306,11 +504,13 @@
         const loadingMessageEl = document.getElementById('loadingMessage');
         const categoriesListEl = document.getElementById('categoriesList');
         const newCategoryNameInput = document.getElementById('newCategoryName');
+        const newCategoryFixedCostInput = document.getElementById('newCategoryFixedCost');
         const addCategoryErrorEl = document.getElementById('addCategoryError');
 
         const editCategoryModalEl = document.getElementById('editCategoryModal');
         const editCategoryIdInputEl = document.getElementById('editCategoryIdInput');
         const editCategoryNameInputEl = document.getElementById('editCategoryNameInput');
+        const editCategoryFixedCostInput = document.getElementById('editCategoryFixedCost');
         const editCategoryErrorEl = document.getElementById('editCategoryError');
 
         const editRuleModalEl = document.getElementById('editRuleModal');
@@ -387,6 +587,7 @@
                 categoryDiv.className = 'category-item';
                 categoryDiv.setAttribute('data-category-id', category.id);
                 const safeCategoryName = escapeHTML(category.name);
+                const fixedCostIndicator = category.is_fixed_cost ? '<span class="fixed-cost-indicator">Fixed Cost</span>' : '';
 
                 let rulesHtml = category.rules.map(rule => {
                     const safeKeyword = escapeHTML(rule.keyword_pattern);
@@ -412,9 +613,9 @@
 
                 categoryDiv.innerHTML = `
                     <div class="category-header">
-                        <h3 id="categoryName-${category.id}">${safeCategoryName}</h3>
+                        <h3 id="categoryName-${category.id}">${safeCategoryName}${fixedCostIndicator}</h3>
                         <div class="btn-group">
-                            <button class="action-btn tooltip" onclick="openEditCategoryModal(${category.id}, '${escapeHTML(category.name, true)}')">
+                            <button class="action-btn tooltip" onclick="openEditCategoryModal(${category.id}, '${escapeHTML(category.name, true)}', ${category.is_fixed_cost})">
                                 <i class="fas fa-edit edit-icon"></i>
                                 <span class="tooltiptext">Edit Category</span>
                             </button>
@@ -453,6 +654,7 @@
 
         async function addCategory() {
             const name = newCategoryNameInput.value.trim();
+            const isFixedCost = newCategoryFixedCostInput.checked;
             clearError(addCategoryErrorEl);
             if (!name) {
                 showError(addCategoryErrorEl, 'Category name is required.');
@@ -462,9 +664,10 @@
             try {
                 const newCategory = await fetchAPI('/categories', {
                     method: 'POST',
-                    body: { name }
+                    body: { name, is_fixed_cost: isFixedCost }
                 });
                 newCategoryNameInput.value = '';
+                newCategoryFixedCostInput.checked = false;
                 await loadCategories();
             } catch (error) {
                 showError(addCategoryErrorEl, error.message);
@@ -494,9 +697,10 @@
             }
         }
 
-        function openEditCategoryModal(categoryId, currentName) {
+        function openEditCategoryModal(categoryId, currentName, isFixedCost) {
             editCategoryIdInputEl.value = categoryId;
             editCategoryNameInputEl.value = currentName;
+            editCategoryFixedCostInput.checked = isFixedCost || false;
             clearError(editCategoryErrorEl);
             editCategoryModalEl.style.display = 'flex';
         }
@@ -508,6 +712,7 @@
         async function submitCategoryEdit() {
             const categoryId = editCategoryIdInputEl.value;
             const newName = editCategoryNameInputEl.value.trim();
+            const isFixedCost = editCategoryFixedCostInput.checked;
             clearError(editCategoryErrorEl);
 
             if (!newName) {
@@ -518,7 +723,7 @@
             try {
                 const updatedCategory = await fetchAPI(`/categories/${categoryId}`, {
                     method: 'PUT',
-                    body: { name: newName }
+                    body: { name: newName, is_fixed_cost: isFixedCost }
                 });
                 closeEditCategoryModal();
                 await loadCategories();
@@ -616,6 +821,20 @@
                 e.preventDefault();
                 addCategory();
             }
+        });
+
+        // Make toggle labels clickable
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners for the toggle labels
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('toggle-label')) {
+                    const toggleContainer = e.target.closest('.toggle-container');
+                    const checkbox = toggleContainer.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                }
+            });
         });
     </script>
 </body>

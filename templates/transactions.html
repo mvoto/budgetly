@@ -9,6 +9,231 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Enhanced form and button styling for transactions page */
+        .upload-section,
+        .transaction-actions {
+            background-color: var(--white-color);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            border: 1px solid var(--gray-200);
+        }
+
+        .upload-section h2,
+        .transaction-actions h2 {
+            margin-top: 0;
+            color: var(--gray-800);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: var(--gray-700);
+            font-size: 0.95rem;
+        }
+
+        .form-group input[type="file"] {
+            padding: 0.75rem;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--border-radius);
+            background-color: var(--gray-50);
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-group input[type="file"]:hover {
+            border-color: var(--primary-color);
+            background-color: var(--white-color);
+        }
+
+        .form-group input[type="file"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            outline: none;
+        }
+
+        .help-text {
+            font-size: 0.85rem;
+            color: var(--gray-500);
+            font-style: italic;
+            margin-top: 0.25rem;
+        }
+
+        /* Enhanced button styling */
+        .btn {
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #4338CA 0%, #5B21B6 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%);
+            box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #4B5563 0%, #6B7280 100%);
+            box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+        }
+
+        .btn-delete-all {
+            background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-delete-all:hover {
+            background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Upload form layout */
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .upload-form .btn {
+            align-self: flex-start;
+        }
+
+        /* Transaction actions styling */
+        .transaction-actions p {
+            color: var(--gray-600);
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+
+        /* Enhanced action buttons */
+        .action-btn {
+            background: none !important;
+            border: none !important;
+            padding: 0.5rem !important;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            border-radius: var(--border-radius-sm) !important;
+            box-shadow: none !important;
+            text-decoration: none !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover {
+            background-color: var(--gray-100) !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .edit-icon {
+            color: #4F46E5;
+        }
+
+        .delete-icon {
+            color: #EF4444;
+        }
+
+        /* Tooltip improvements */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            background-color: var(--gray-800);
+            color: var(--white-color);
+            text-align: center;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+
+            /* Position the tooltip */
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+
+            /* Fade in */
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Table enhancements */
+        table {
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            font-weight: 600;
+        }
+
+        tbody tr:hover {
+            background-color: var(--gray-50);
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .upload-form {
+                gap: 0.75rem;
+            }
+
+            .form-group input[type="file"] {
+                padding: 0.6rem;
+            }
+
+            .btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -228,6 +453,28 @@
                 window.location.href = '/transactions/' + selector.value;
             }
         }
+
+        // Auto-scroll to transactions table after sorting
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if there are sorting parameters in the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const sortBy = urlParams.get('sort_by');
+            const sortOrder = urlParams.get('sort_order');
+
+            // If sorting parameters exist, scroll to the transactions table
+            if (sortBy && sortOrder) {
+                const transactionsSection = document.querySelector('.transactions-section');
+                if (transactionsSection) {
+                    // Add a small delay to ensure the page is fully loaded
+                    setTimeout(() => {
+                        transactionsSection.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }, 100);
+                }
+            }
+        });
     </script>
 </body>
 </html>

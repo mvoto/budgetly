@@ -1819,3 +1819,155 @@ form button.action-btn[type="submit"]:hover {
         text-align: left;
     }
 }
+
+/* Fixed Costs Analysis Section */
+.fixed-costs-analysis {
+    background-color: var(--white-color);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.fixed-costs-analysis h2 {
+    margin-top: 0;
+    color: var(--gray-800);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+}
+
+.loading-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+    font-style: italic;
+}
+
+.costs-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.cost-type-card {
+    background-color: var(--gray-50);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    border: 2px solid transparent;
+    transition: all var(--transition-speed);
+}
+
+.cost-type-card.fixed-costs {
+    border-color: var(--warning-color);
+    background-color: #FEF3C7;
+}
+
+.cost-type-card.variable-costs {
+    border-color: var(--info-color);
+    background-color: #DBEAFE;
+}
+
+.cost-type-card h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.cost-amount {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+}
+
+.cost-percentage {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.75rem;
+}
+
+.cost-description {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    font-style: italic;
+}
+
+.costs-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.breakdown-section h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    border-bottom: 2px solid var(--gray-200);
+    padding-bottom: 0.5rem;
+}
+
+.categories-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.category-breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius-sm);
+    border-left: 4px solid var(--gray-300);
+}
+
+.category-breakdown-item.fixed-cost {
+    border-left-color: var(--warning-color);
+}
+
+.category-breakdown-item.variable-cost {
+    border-left-color: var(--info-color);
+}
+
+.category-breakdown-name {
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+.category-breakdown-amount {
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.no-costs-message {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--gray-500);
+    font-style: italic;
+    background-color: var(--gray-50);
+    border-radius: var(--border-radius-sm);
+}
+
+/* Responsive design for fixed costs analysis */
+@media (max-width: 768px) {
+    .costs-summary {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .cost-amount {
+        font-size: 1.5rem;
+    }
+
+    .cost-percentage {
+        font-size: 1.1rem;
+    }
+}

@@ -31,6 +31,7 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_fixed_cost = db.Column(db.Boolean, nullable=False, default=False)
     rules = db.relationship('Rule', backref='category', lazy=True, cascade="all, delete-orphan")
     transactions = db.relationship('Transaction', backref='category', lazy=True)
     budgets = db.relationship('Budget', backref='category', lazy=True, cascade="all, delete-orphan")
@@ -45,6 +46,7 @@ class Category(db.Model):
         return {
             'id': self.id,
             'name': self.name,
+            'is_fixed_cost': self.is_fixed_cost,
             'rules': [rule.to_dict() for rule in self.rules]
         }
 
