@@ -244,7 +244,7 @@
             <a href="{{ url_for('serve_category_manager_html') }}">Manage Categories</a>
         </nav>
         <div class="user-info">
-            <span>Welcome, {{ current_user.email }}</span>
+            <a href="{{ url_for('auth.account') }}" class="user-welcome">Welcome, {{ current_user.email }}</a>
             <a href="{{ url_for('auth.logout') }}" class="logout-btn">
                 <i class="fas fa-sign-out-alt"></i>
                 Logout

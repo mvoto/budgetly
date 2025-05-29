@@ -1984,3 +1984,62 @@ form button.action-btn[type="submit"]:hover {
         font-size: 1.1rem;
     }
 }
+
+/* User Info and Logout Button Styling */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--gray-700);
+}
+
+.user-welcome {
+    color: var(--gray-700);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    transition: all var(--transition-speed);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-welcome:hover {
+    background-color: var(--gray-100);
+    color: var(--primary-color);
+}
+
+.logout-btn {
+    background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    transition: all var(--transition-speed);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.logout-btn:hover {
+    background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+@media (max-width: 768px) {
+    .user-info {
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
+    }
+
+    .logout-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}

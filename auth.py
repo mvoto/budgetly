@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from extensions import db
 from models import User
-from forms import LoginForm, RegistrationForm
+from forms import LoginForm, RegistrationForm, ChangePasswordForm
 
 auth = Blueprint('auth', __name__)
 
@@ -55,6 +55,26 @@ def register():
             else:
                 flash('An error occurred during registration. Please try again.', 'error')
     return render_template('auth/register.html', title='Register', form=form)
+
+@auth.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if current_user.check_password(form.current_password.data):
+            current_user.set_password(form.new_password.data)
+            try:
+                db.session.commit()
+                flash('Password updated successfully!', 'success')
+                return redirect(url_for('auth.account'))
+            except Exception as e:
+                db.session.rollback()
+                flash('An error occurred while updating your password. Please try again.', 'error')
+                print(f"Password update error: {e}")
+        else:
+            flash('Current password is incorrect.', 'error')
+
+    return render_template('auth/account.html', title='Account Settings', form=form)
 
 @auth.route('/logout')
 @login_required
