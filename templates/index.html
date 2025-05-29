@@ -276,6 +276,7 @@
                 </div>
 
                 <div class="budget-summary-actions">
+                    <button class="btn btn-primary" onclick="showCarryOverModal()">Carry Over Budgets</button>
                     <button class="btn btn-secondary" onclick="clearAllBudgets()">Clear All Budgets</button>
                     <p id="budgetError" class="error-message" style="display: none;"></p>
                 </div>
@@ -556,6 +557,104 @@
             element.textContent = message;
             element.style.display = 'block';
         }
+
+        // Carry-over functionality
+        function showCarryOverModal() {
+            const modal = document.getElementById('carryOverModal');
+            modal.style.display = 'flex';
+        }
+
+        function hideCarryOverModal() {
+            const modal = document.getElementById('carryOverModal');
+            modal.style.display = 'none';
+        }
+
+        function carryOverBudgets() {
+            const targetMonths = parseInt(document.getElementById('targetMonths').value);
+            const errorEl = document.getElementById('carryOverError');
+            const successEl = document.getElementById('carryOverSuccess');
+
+            // Clear previous messages
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+
+            if (!targetMonths || targetMonths < 1 || targetMonths > 60) {
+                showError(errorEl, 'Please enter a valid number of months (1-60)');
+                return;
+            }
+
+            // Show loading state
+            const carryOverBtn = document.querySelector('.carry-over-btn');
+            const originalText = carryOverBtn.textContent;
+            carryOverBtn.textContent = 'Carrying Over...';
+            carryOverBtn.disabled = true;
+
+            fetch('/api/budgets/carry-over', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    source_month: currentMonth,
+                    source_year: currentYear,
+                    target_months: targetMonths
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(errorEl, data.error);
+                } else {
+                    successEl.textContent = `Success! ${data.budgets_created} budgets created, ${data.budgets_updated} budgets updated for ${data.target_months} months.`;
+                    successEl.style.display = 'block';
+
+                    // Hide modal after 2 seconds
+                    setTimeout(() => {
+                        hideCarryOverModal();
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error carrying over budgets:', error);
+                showError(errorEl, 'Failed to carry over budgets. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                carryOverBtn.textContent = originalText;
+                carryOverBtn.disabled = false;
+            });
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('carryOverModal');
+            if (event.target === modal) {
+                hideCarryOverModal();
+            }
+        }
     </script>
+
+    <!-- Carry Over Modal -->
+    <div id="carryOverModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Carry Over Budgets</h3>
+            <p>This will copy all current budgets from <strong>{{ current_month }} {{ current_year }}</strong> to the upcoming months.</p>
+
+            <div class="form-group">
+                <label for="targetMonths">Number of months to carry over to:</label>
+                <input type="number" id="targetMonths" min="1" max="60" value="12" placeholder="12">
+                <small>Enter how many future months you want to apply these budgets to (max 60)</small>
+            </div>
+
+            <p id="carryOverSuccess" class="success-message" style="display: none;"></p>
+            <p id="carryOverError" class="error-message" style="display: none;"></p>
+
+            <div class="modal-buttons">
+                <button type="button" class="btn btn-secondary" onclick="hideCarryOverModal()">Cancel</button>
+                <button type="button" class="btn btn-primary carry-over-btn" onclick="carryOverBudgets()">Carry Over Budgets</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

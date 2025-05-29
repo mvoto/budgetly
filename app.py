@@ -977,6 +977,102 @@ def create_app():
             app.logger.error(f"Error deleting budget ID {budget_id}: {e}")
             return jsonify({"error": "Failed to delete budget"}), 500
 
+    @app.route('/api/budgets/carry-over', methods=['POST'])
+    @login_required
+    @csrf.exempt
+    def carry_over_budgets():
+        """Carry over current month's budgets to future months"""
+        from datetime import datetime, timedelta
+        from dateutil.relativedelta import relativedelta
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'JSON data is required'}), 400
+
+        source_month = data.get('source_month')
+        source_year = data.get('source_year')
+        target_months = data.get('target_months', 12)  # Default to 12 months
+
+        if not source_month or not source_year:
+            return jsonify({'error': 'source_month and source_year are required'}), 400
+
+        # Validate inputs
+        if not (1 <= source_month <= 12):
+            return jsonify({'error': 'Source month must be between 1 and 12'}), 400
+
+        if source_year < 2000 or source_year > 2100:
+            return jsonify({'error': 'Source year must be between 2000 and 2100'}), 400
+
+        if not (1 <= target_months <= 60):  # Max 5 years
+            return jsonify({'error': 'Target months must be between 1 and 60'}), 400
+
+        try:
+            # Get all budgets for the source month/year for current user
+            source_budgets = Budget.query.filter_by(
+                month=source_month,
+                year=source_year,
+                user_id=current_user.id
+            ).all()
+
+            if not source_budgets:
+                return jsonify({'error': f'No budgets found for {source_year}-{source_month:02d}'}), 404
+
+            budgets_created = 0
+            budgets_updated = 0
+
+            # Start from the next month after the source month
+            current_date = datetime(source_year, source_month, 1) + relativedelta(months=1)
+
+            for month_offset in range(target_months):
+                target_month = current_date.month
+                target_year = current_date.year
+
+                for source_budget in source_budgets:
+                    # Check if budget already exists for this category/month/year
+                    existing_budget = Budget.query.filter_by(
+                        category_id=source_budget.category_id,
+                        month=target_month,
+                        year=target_year,
+                        user_id=current_user.id
+                    ).first()
+
+                    if existing_budget:
+                        # Update existing budget
+                        existing_budget.budgeted_amount = source_budget.budgeted_amount
+                        budgets_updated += 1
+                    else:
+                        # Create new budget
+                        new_budget = Budget(
+                            category_id=source_budget.category_id,
+                            month=target_month,
+                            year=target_year,
+                            budgeted_amount=source_budget.budgeted_amount,
+                            user_id=current_user.id
+                        )
+                        db.session.add(new_budget)
+                        budgets_created += 1
+
+                # Move to next month
+                current_date += relativedelta(months=1)
+
+            db.session.commit()
+
+            app.logger.info(f"Carried over budgets from {source_year}-{source_month:02d} for {target_months} months: {budgets_created} created, {budgets_updated} updated")
+
+            return jsonify({
+                'message': f'Successfully carried over budgets for {target_months} months',
+                'budgets_created': budgets_created,
+                'budgets_updated': budgets_updated,
+                'source_month': source_month,
+                'source_year': source_year,
+                'target_months': target_months
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error carrying over budgets: {e}")
+            return jsonify({"error": "Failed to carry over budgets"}), 500
+
     @app.route('/api/add-default-categories', methods=['POST'])
     @login_required
     @csrf.exempt

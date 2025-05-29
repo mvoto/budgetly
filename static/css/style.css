@@ -1706,6 +1706,12 @@ form button.action-btn[type="submit"]:hover {
     margin-top: 0.5rem;
 }
 
+.success-message {
+    color: var(--success-color);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
 /* Modal Styles for Budget Edit */
 .modal {
     position: fixed;
@@ -1754,6 +1760,13 @@ form button.action-btn[type="submit"]:hover {
     border-radius: var(--border-radius);
     font-size: 0.95rem;
     box-sizing: border-box;
+}
+
+.modal-content small {
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: block;
 }
 
 .modal-buttons {

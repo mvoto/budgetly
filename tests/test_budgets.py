@@ -463,3 +463,140 @@ class TestBudgetIntegration:
         assert response.status_code == 200
         # The dashboard should contain budget-related content
         assert b'Budget' in response.data or b'budget' in response.data
+
+    def test_carry_over_budgets_success(self, app, auth_client, test_user):
+        """Test successful budget carry-over functionality."""
+        # Create categories and budgets for source month
+        with app.app_context():
+            category1 = Category(name='Groceries', user_id=test_user)
+            category2 = Category(name='Utilities', user_id=test_user)
+            db.session.add_all([category1, category2])
+            db.session.flush()
+
+            budget1 = Budget(
+                category_id=category1.id,
+                month=1,
+                year=2024,
+                budgeted_amount=500.00,
+                user_id=test_user
+            )
+            budget2 = Budget(
+                category_id=category2.id,
+                month=1,
+                year=2024,
+                budgeted_amount=200.00,
+                user_id=test_user
+            )
+            db.session.add_all([budget1, budget2])
+            db.session.commit()
+
+        # Carry over budgets for 2 months
+        response = auth_client.post('/api/budgets/carry-over', json={
+            'source_month': 1,
+            'source_year': 2024,
+            'target_months': 2
+        })
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['budgets_created'] == 4  # 2 categories × 2 months
+        assert data['budgets_updated'] == 0
+        assert data['target_months'] == 2
+
+        # Verify budgets were created for February and March 2024
+        with app.app_context():
+            feb_budgets = Budget.query.filter_by(month=2, year=2024, user_id=test_user).all()
+            mar_budgets = Budget.query.filter_by(month=3, year=2024, user_id=test_user).all()
+
+            assert len(feb_budgets) == 2
+            assert len(mar_budgets) == 2
+
+            # Check amounts are correct
+            amounts = [b.budgeted_amount for b in feb_budgets + mar_budgets]
+            assert 500.00 in amounts
+            assert 200.00 in amounts
+
+    def test_carry_over_budgets_update_existing(self, app, auth_client, test_user):
+        """Test that carry-over updates existing budgets."""
+        # Create categories and budgets
+        with app.app_context():
+            category = Category(name='Test Category', user_id=test_user)
+            db.session.add(category)
+            db.session.flush()
+
+            # Source budget
+            source_budget = Budget(
+                category_id=category.id,
+                month=1,
+                year=2024,
+                budgeted_amount=300.00,
+                user_id=test_user
+            )
+            # Existing target budget with different amount
+            existing_budget = Budget(
+                category_id=category.id,
+                month=2,
+                year=2024,
+                budgeted_amount=100.00,
+                user_id=test_user
+            )
+            db.session.add_all([source_budget, existing_budget])
+            db.session.commit()
+            category_id = category.id
+
+        # Carry over budgets for 1 month
+        response = auth_client.post('/api/budgets/carry-over', json={
+            'source_month': 1,
+            'source_year': 2024,
+            'target_months': 1
+        })
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['budgets_created'] == 0
+        assert data['budgets_updated'] == 1
+
+        # Verify existing budget was updated
+        with app.app_context():
+            updated_budget = Budget.query.filter_by(
+                category_id=category_id,
+                month=2,
+                year=2024,
+                user_id=test_user
+            ).first()
+            assert updated_budget.budgeted_amount == 300.00
+
+    def test_carry_over_budgets_no_source_budgets(self, auth_client):
+        """Test carry-over when no source budgets exist."""
+        response = auth_client.post('/api/budgets/carry-over', json={
+            'source_month': 1,
+            'source_year': 2024,
+            'target_months': 1
+        })
+        assert response.status_code == 404
+        data = json.loads(response.data)
+        assert 'No budgets found' in data['error']
+
+    def test_carry_over_budgets_validation(self, auth_client):
+        """Test validation for carry-over parameters."""
+        # Test invalid month
+        response = auth_client.post('/api/budgets/carry-over', json={
+            'source_month': 13,
+            'source_year': 2024,
+            'target_months': 1
+        })
+        assert response.status_code == 400
+
+        # Test invalid year
+        response = auth_client.post('/api/budgets/carry-over', json={
+            'source_month': 1,
+            'source_year': 1999,
+            'target_months': 1
+        })
+        assert response.status_code == 400
+
+        # Test invalid target_months
+        response = auth_client.post('/api/budgets/carry-over', json={
+            'source_month': 1,
+            'source_year': 2024,
+            'target_months': 61
+        })
+        assert response.status_code == 400
